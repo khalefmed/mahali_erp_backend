@@ -6,7 +6,7 @@ OpenAPI schema: `/api/schema/` (snapshot committed in `openapi/schema.yaml`).
 | Environment | URL |
 | --- | --- |
 | Local | http://localhost:8000/api/v1/ |
-| Staging | https://api.staging.mahali.infinity.mr/api/v1/ |
+| Staging | https://mahali-api-staging.infinity.mr/api/v1/ (docs: `/api/docs/`) |
 
 ## Run it locally
 

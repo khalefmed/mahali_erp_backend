@@ -10,8 +10,9 @@ set -euo pipefail
 ENV_NAME="${1:-staging}"
 CI_PUBLIC_KEY="${*:2}"  # all remaining args: ssh re-splits the key on spaces
 [ -n "$CI_PUBLIC_KEY" ] || { echo "GitHub Actions public key required" >&2; exit 1; }
-DOMAIN="api.${ENV_NAME}.mahali.infinity.mr"
-[ "$ENV_NAME" = production ] && DOMAIN="api.mahali.infinity.mr"
+# Vercel DNS (infinity.mr) only accepts one-level names: mahali-api[-staging].infinity.mr
+DOMAIN="mahali-api-${ENV_NAME}.infinity.mr"
+[ "$ENV_NAME" = production ] && DOMAIN="mahali-api.infinity.mr"
 PORT=8010; [ "$ENV_NAME" = production ] && PORT=8011
 DIR="/opt/mahali/${ENV_NAME}"
 
@@ -62,7 +63,7 @@ fi
 # 4. nginx site (HTTP; run certbot once DNS points here)
 SITE="/etc/nginx/sites-available/mahali-${ENV_NAME}"
 if [ ! -f "$SITE" ]; then
-  sed -e "s/api.staging.mahali.infinity.mr/${DOMAIN}/" -e "s/127.0.0.1:8010/127.0.0.1:${PORT}/" \
+  sed -e "s/mahali-api-staging.infinity.mr/${DOMAIN}/" -e "s/127.0.0.1:8010/127.0.0.1:${PORT}/" \
     "$DIR/deploy/nginx/mahali-staging.conf" | sudo tee "$SITE" >/dev/null
   sudo ln -sf "$SITE" "/etc/nginx/sites-enabled/mahali-${ENV_NAME}"
   sudo nginx -t && sudo systemctl reload nginx
@@ -74,4 +75,4 @@ CRON="30 2 * * * $DIR/deploy/backup.sh ${ENV_NAME} >> /opt/mahali/backups/backup
   | { cat; echo "$CRON"; } | sudo crontab -u deploy -
 
 echo "Ready: $DIR (port ${PORT}, ${DOMAIN}). Next: deploy/deploy.sh ${ENV_NAME} <sha> as deploy."
-echo "TLS once DNS resolves: sudo certbot --nginx -d ${DOMAIN}"
+echo "TLS once DNS resolves: sudo certbot --nginx --redirect -d ${DOMAIN}, then SECURE_SSL_REDIRECT=true in .env"
