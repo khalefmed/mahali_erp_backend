@@ -8,7 +8,8 @@
 # Safe to run again: existing secrets are kept.
 set -euo pipefail
 ENV_NAME="${1:-staging}"
-CI_PUBLIC_KEY="${2:?GitHub Actions public key required}"
+CI_PUBLIC_KEY="${*:2}"  # all remaining args: ssh re-splits the key on spaces
+[ -n "$CI_PUBLIC_KEY" ] || { echo "GitHub Actions public key required" >&2; exit 1; }
 DOMAIN="api.${ENV_NAME}.mahali.infinity.mr"
 [ "$ENV_NAME" = production ] && DOMAIN="api.mahali.infinity.mr"
 PORT=8010; [ "$ENV_NAME" = production ] && PORT=8011
