@@ -41,6 +41,10 @@ def register(
     *, email: str, password: str, full_name: str, phone: str = "", language: str = "fr"
 ) -> None:
     """Same response whether or not the email is taken (no account enumeration)."""
+    from apps.console.models import PlatformSettings
+
+    if not PlatformSettings.signups_are_open():
+        raise Forbidden("signups_closed", "Sign-ups are closed for now.")
     email = email.strip().lower()
     existing = User.objects.filter(email__iexact=email).first()
     if existing:

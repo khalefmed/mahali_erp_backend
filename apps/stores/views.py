@@ -83,7 +83,8 @@ class StoreViewSet(
         operation_id="stores_create",
         request=StoreCreateSerializer,
         responses={201: StoreSerializer},
-        description="Creates a store in `draft`; the caller becomes its owner.",
+        description="Creates a store in `draft`; the caller becomes its owner. "
+        "Errors: `too_many_pending_stores` (409), `signups_closed` (403).",
     )
     def create(self, request, *args, **kwargs):
         serializer = StoreCreateSerializer(data=request.data)

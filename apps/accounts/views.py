@@ -45,7 +45,8 @@ class RegisterView(PublicAuthView):
         request=RegisterSerializer,
         responses={202: None},
         description="Creates the account and emails a 6-digit code. Always 202, even if the "
-        "email is already used (no account enumeration). Next: `auth/verify-email`.",
+        "email is already used (no account enumeration). Next: `auth/verify-email`. "
+        "Errors: `signups_closed` (403).",
     )
     def post(self, request):
         services.register(**self.validated(RegisterSerializer))
