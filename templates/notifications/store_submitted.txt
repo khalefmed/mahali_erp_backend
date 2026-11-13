@@ -1,0 +1,6 @@
+{% autoescape off %}Bonjour,
+
+Nous avons bien reçu la demande d'ouverture de {{ store.name }}. L'équipe Mahali la vérifie sous 24 h. Vous recevrez un email dès qu'elle est validée.
+
+L'équipe Mahali
+{% endautoescape %}

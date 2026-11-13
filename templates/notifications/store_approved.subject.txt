@@ -1,0 +1,2 @@
+{% autoescape off %}{{ store.name }} est validée 🎉
+{% endautoescape %}

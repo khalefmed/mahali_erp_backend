@@ -1,0 +1,2 @@
+{% autoescape off %}Invitation à rejoindre {{ store.name }} sur Mahali
+{% endautoescape %}

@@ -1,0 +1,55 @@
+# Staging / production stack on the VPS. One copy per environment in /opt/mahali/<env>,
+# deployed only by GitHub Actions (.github/workflows/deploy.yml). Secrets live in
+# /opt/mahali/<env>/.env on the server, never in git.
+name: mahali-${MAHALI_ENV:-staging}
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD}
+      APP_DB_USER: mahali
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+      APP_DB_NAME: mahali
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../docker/postgres/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  api:
+    build: ..
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://mahali:${APP_DB_PASSWORD}@db:5432/mahali
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - media:/data/media
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_started}
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      API_DOMAIN: ${API_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on: [api]
+
+volumes:
+  pgdata:
+  media:
+  caddy_data:

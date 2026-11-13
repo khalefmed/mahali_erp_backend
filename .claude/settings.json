@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(uv sync)",
+      "Bash(uv run pytest:*)",
+      "Bash(uv run ruff check:*)",
+      "Bash(uv run ruff format:*)",
+      "Bash(uv run python manage.py check)",
+      "Bash(uv run python manage.py makemigrations:*)",
+      "Bash(uv run python manage.py migrate:*)",
+      "Bash(uv run python manage.py spectacular:*)",
+      "Bash(uv run python manage.py showmigrations:*)",
+      "Bash(docker compose up -d)",
+      "Bash(docker compose ps)",
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git switch:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh issue list:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr checks:*)"
+    ],
+    "deny": [
+      "Bash(git push --force:*)",
+      "Bash(ssh:*)",
+      "Bash(*deploy.sh*)",
+      "Read(./.env)",
+      "Read(./deploy/.env)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // empty' | grep -E '\\.py$' | xargs -r uv run ruff format --quiet >/dev/null 2>&1 || true"
+          }
+        ]
+      }
+    ]
+  }
+}

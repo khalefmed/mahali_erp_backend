@@ -1,0 +1,6 @@
+{% autoescape off %}Bonjour,
+
+{{ from_user.full_name }} souhaite vous transférer la propriété de {{ store.name }}. Ouvrez Mahali pour accepter : {{ web_app_url }}
+
+L'équipe Mahali
+{% endautoescape %}

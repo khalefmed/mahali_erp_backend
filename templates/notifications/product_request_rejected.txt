@@ -1,0 +1,7 @@
+{% autoescape off %}Bonjour,
+
+Nous n'avons pas ajouté « {{ request.name }} » au catalogue.
+{{ request.decision_message }}
+
+L'équipe Mahali
+{% endautoescape %}

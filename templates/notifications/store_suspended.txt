@@ -1,0 +1,7 @@
+{% autoescape off %}Bonjour,
+
+{{ store.name }} est suspendue : vos données restent consultables mais aucune opération n'est possible.
+Motif : {{ message }}
+
+L'équipe Mahali
+{% endautoescape %}

@@ -1,0 +1,16 @@
+name: Bug
+description: Something the API does wrong.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happens / what should happen
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Request to reproduce
+      description: Method, path, body, and the response (with `X-Request-ID`).
+      render: shell

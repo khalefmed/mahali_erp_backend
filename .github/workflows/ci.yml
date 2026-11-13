@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-retries 10
+    env:
+      DJANGO_SECRET_KEY: ci-not-secret-0123456789abcdef0123456789abcdef
+      DATABASE_URL: postgres://mahali:mahali@localhost:5432/mahali
+      REDIS_URL: redis://localhost:6379/0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.13"
+          enable-cache: true
+      - name: App database role (not superuser, no BYPASSRLS — like production)
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -c "CREATE ROLE mahali LOGIN PASSWORD 'mahali' NOSUPERUSER NOBYPASSRLS CREATEDB"
+          psql -h localhost -U postgres -c "CREATE DATABASE mahali OWNER mahali"
+      - run: uv sync --frozen
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run python manage.py makemigrations --check --dry-run
+      - name: OpenAPI schema is up to date (the web app generates its client from it)
+        run: |
+          uv run python manage.py spectacular --file /tmp/schema.yaml --validate --fail-on-warn
+          diff -u openapi/schema.yaml /tmp/schema.yaml || (echo "Run: uv run python manage.py spectacular --file openapi/schema.yaml" && exit 1)
+      - run: uv run pytest --create-db -p no:cacheprovider
+      - run: uv run bandit -q -c pyproject.toml -r apps config
+      - run: uv run pip-audit --strict --progress-spinner off

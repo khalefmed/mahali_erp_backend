@@ -1,0 +1,6 @@
+{% autoescape off %}Bonjour {{ user.full_name }},
+
+Vous avez un accès à la console Mahali ({{ role }}). Choisissez votre mot de passe : {{ link }}
+
+L'équipe Mahali
+{% endautoescape %}
