@@ -1,0 +1,9 @@
+{% autoescape off %}Bonjour,
+
+Pour valider {{ store.name }}, l'équipe Mahali a besoin de compléments :
+{{ message }}
+
+Complétez votre demande ici : {{ web_app_url }}
+
+L'équipe Mahali
+{% endautoescape %}

@@ -1,0 +1,7 @@
+{% autoescape off %}Bonjour,
+
+{{ inviter.full_name }} vous invite à rejoindre {{ store.name }} sur Mahali en tant que {{ role }}.
+Accepter l'invitation (valable 7 jours) : {{ link }}
+
+L'équipe Mahali
+{% endautoescape %}

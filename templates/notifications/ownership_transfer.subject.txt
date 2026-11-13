@@ -1,0 +1,2 @@
+{% autoescape off %}{{ store.name }} : transfert de propriété
+{% endautoescape %}

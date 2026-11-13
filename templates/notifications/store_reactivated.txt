@@ -1,0 +1,6 @@
+{% autoescape off %}Bonjour,
+
+{{ store.name }} est de nouveau active.
+
+L'équipe Mahali
+{% endautoescape %}

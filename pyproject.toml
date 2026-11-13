@@ -1,0 +1,59 @@
+[project]
+name = "mahali-erp-backend"
+version = "0.1.0"
+description = "Mahali ERP — Django REST API"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "django>=5.2,<5.3",
+    "djangorestframework>=3.16",
+    "djangorestframework-simplejwt>=5.5",
+    "drf-spectacular>=0.28",
+    "django-filter>=25.1",
+    "django-environ>=0.12",
+    "django-redis>=6.0",
+    "django-pghistory>=3.7",
+    "psycopg[binary]>=3.2",
+    "argon2-cffi>=25.1",
+    "gunicorn>=23.0",
+    "whitenoise>=6.9",
+    "sentry-sdk[django]>=2.30",
+    "requests>=2.32",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4",
+    "pytest-django>=4.11",
+    "pytest-cov>=6.2",
+    "factory-boy>=3.3",
+    "ruff>=0.12",
+    "pip-audit>=2.9",
+    "bandit>=1.8",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+extend-exclude = ["**/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "DJ", "S", "SIM", "RUF"]
+ignore = ["RUF012", "DJ008"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S101", "S105", "S106"]
+"conftest.py" = ["S105", "S106"]
+"config/settings.py" = ["S105"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["test_*.py"]
+addopts = "--reuse-db -q"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv"]
+skips = ["B101"]

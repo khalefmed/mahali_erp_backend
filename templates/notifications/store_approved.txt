@@ -1,0 +1,8 @@
+{% autoescape off %}Bonjour,
+
+Bonne nouvelle : {{ store.name }} est validée. Vous pouvez commencer à vendre : {{ web_app_url }}
+{% if message %}
+Message de l'équipe : {{ message }}{% endif %}
+
+L'équipe Mahali
+{% endautoescape %}

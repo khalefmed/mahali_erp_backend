@@ -1,0 +1,7 @@
+{% autoescape off %}Bonjour {{ user.full_name }},
+
+Nouvelle connexion depuis : {{ session.user_agent|default:'appareil inconnu' }} ({{ session.ip_address|default:'' }}).
+Si ce n'est pas vous, changez votre mot de passe et déconnectez cet appareil depuis votre profil.
+
+L'équipe Mahali
+{% endautoescape %}

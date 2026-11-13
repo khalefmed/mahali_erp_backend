@@ -1,0 +1,6 @@
+{% autoescape off %}Bonjour,
+
+« {{ request.name }} » est maintenant dans le catalogue Mahali. Ajoutez-le à {{ store.name }} avec votre prix et votre stock.
+
+L'équipe Mahali
+{% endautoescape %}

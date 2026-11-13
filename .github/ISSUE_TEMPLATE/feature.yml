@@ -1,0 +1,47 @@
+name: Feature / endpoint
+description: An API capability to build. One issue = one PR.
+labels: [feature]
+body:
+  - type: input
+    id: figma
+    attributes:
+      label: Figma link
+      description: Screen(s) this serves (with node-id), if any.
+      placeholder: https://www.figma.com/design/sgnapT3PC9sxuEtz9JN0ua/...?node-id=
+  - type: dropdown
+    id: module
+    attributes:
+      label: Module
+      options:
+        - core (settings, errors, RLS, notifications)
+        - accounts / auth
+        - stores (onboarding, team)
+        - console (Mahali team)
+        - catalog
+        - inventory / purchasing
+        - sales / till / credits
+        - reports
+        - trade pack (téléphones, électroménager, pharmacie, quincaillerie)
+        - deploy / ops
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: What the web app can do when this is done
+    validations:
+      required: true
+  - type: textarea
+    id: endpoints
+    attributes:
+      label: Endpoints
+      description: Method, path, request, response, error codes.
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      value: |
+        - [ ] Store-scoped data is protected by RLS (new tables have their migration)
+        - [ ] Permissions enforced server-side, error `code`s documented
+        - [ ] Tests for the business rules
+        - [ ] `openapi/schema.yaml` regenerated

@@ -1,0 +1,7 @@
+{% autoescape off %}Bonjour {{ user.full_name }},
+
+Quelqu'un a essayé de créer un compte Mahali avec votre adresse. Vous avez déjà un compte : connectez-vous sur {{ web_app_url }}.
+Si vous avez oublié votre mot de passe, utilisez « Mot de passe oublié ».
+
+L'équipe Mahali
+{% endautoescape %}

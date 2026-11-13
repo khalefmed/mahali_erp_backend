@@ -1,0 +1,9 @@
+{% autoescape off %}Bonjour,
+
+Nous ne pouvons pas valider {{ store.name }}.
+Motif : {{ message }}
+
+Pour toute question, répondez à cet email.
+
+L'équipe Mahali
+{% endautoescape %}

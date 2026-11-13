@@ -1,0 +1,7 @@
+{% autoescape off %}Bonjour,
+
+Un membre de l'équipe Mahali a ouvert {{ store.name }} en lecture seule pendant 30 minutes.
+Motif : {{ reason }}
+
+L'équipe Mahali
+{% endautoescape %}

@@ -1,0 +1,8 @@
+{% autoescape off %}Bonjour {{ user.full_name }},
+
+Votre code de vérification Mahali est : {{ code }}
+
+Il expire dans {{ minutes }} minutes. Si vous n'avez pas créé de compte, ignorez cet email.
+
+L'équipe Mahali
+{% endautoescape %}
