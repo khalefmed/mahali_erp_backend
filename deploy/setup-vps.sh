@@ -28,6 +28,7 @@ sudo install -d -o deploy -g deploy /opt/mahali /opt/mahali/backups
 if [ ! -d "$DIR/.git" ]; then
   sudo -u deploy git clone -q https://github.com/khalefmed/mahali_erp_backend.git "$DIR"
 fi
+[ -d "$DIR/deploy" ] || { echo "deploy/ missing in $DIR: check out a commit that has it" >&2; exit 1; }
 
 # 3. secrets, generated here so they never leave the server
 if ! sudo test -f "$DIR/deploy/.env"; then
@@ -68,8 +69,8 @@ fi
 
 # 5. nightly backup at 02:30
 CRON="30 2 * * * $DIR/deploy/backup.sh ${ENV_NAME} >> /opt/mahali/backups/backup.log 2>&1"
-( sudo crontab -u deploy -l 2>/dev/null | grep -v "backup.sh ${ENV_NAME}" ; echo "$CRON" ) \
-  | sudo crontab -u deploy -
+{ sudo crontab -u deploy -l 2>/dev/null || true; } | { grep -v "backup.sh ${ENV_NAME}" || true; } \
+  | { cat; echo "$CRON"; } | sudo crontab -u deploy -
 
 echo "Ready: $DIR (port ${PORT}, ${DOMAIN}). Next: deploy/deploy.sh ${ENV_NAME} <sha> as deploy."
 echo "TLS once DNS resolves: sudo certbot --nginx -d ${DOMAIN}"
