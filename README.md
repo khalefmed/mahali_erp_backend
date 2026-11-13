@@ -57,7 +57,9 @@ Emails (verification codes, invitations) are printed in the runserver console lo
 
 GitHub Actions deploys: push to `main` → staging, tag `v*` → production
 (`.github/workflows/deploy.yml` → `deploy/deploy.sh` on the server). Stack:
-`deploy/compose.yml` (Postgres, Redis, API under gunicorn, Caddy with automatic HTTPS).
+`deploy/compose.yml` (Postgres, Redis, API under gunicorn on `127.0.0.1:8010`). The VPS
+also hosts other projects: its existing nginx terminates TLS (certbot) and proxies to the
+API (`deploy/nginx/mahali-staging.conf`). Don't bind ports 80/443 from this stack.
 Server secrets are in `/opt/mahali/<env>/deploy/.env` (template: `deploy/env.example`).
 
 ### Backups

@@ -1,5 +1,6 @@
 # Staging / production stack on the VPS. One copy per environment in /opt/mahali/<env>,
-# deployed only by GitHub Actions (.github/workflows/deploy.yml). Secrets live in
+# deployed only by GitHub Actions (.github/workflows/deploy.yml). TLS and the public
+# ports are handled by the nginx already running on the VPS. Secrets live in
 # /opt/mahali/<env>/.env on the server, never in git.
 name: mahali-${MAHALI_ENV:-staging}
 
@@ -32,24 +33,15 @@ services:
     environment:
       DATABASE_URL: postgres://mahali:${APP_DB_PASSWORD}@db:5432/mahali
       REDIS_URL: redis://redis:6379/0
+    ports:
+      # Only reachable from the host: the server's nginx proxies to it (deploy/nginx/).
+      - "${API_BIND:-127.0.0.1:8010}:8000"
     volumes:
       - media:/data/media
     depends_on:
       db: {condition: service_healthy}
       redis: {condition: service_started}
 
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    ports: ["80:80", "443:443"]
-    environment:
-      API_DOMAIN: ${API_DOMAIN}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-    depends_on: [api]
-
 volumes:
   pgdata:
   media:
-  caddy_data:
