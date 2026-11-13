@@ -17,6 +17,7 @@ def _test_settings(settings, tmp_path):
     settings.CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
     settings.PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
     settings.PWNED_PASSWORDS_CHECK = False
+    settings.SECURE_SSL_REDIRECT = False  # CI runs with production settings (DEBUG off)
     settings.STORAGES = {
         **settings.STORAGES,
         "default": {
