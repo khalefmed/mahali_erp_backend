@@ -12,7 +12,7 @@ docker compose run --rm api python manage.py migrate --noinput
 docker compose up -d --remove-orphans
 docker image prune -f >/dev/null
 for i in $(seq 1 30); do
-  if docker compose exec -T api python -c "import urllib.request,sys; sys.exit(urllib.request.urlopen('http://localhost:8000/health').status!=200)"; then
+  if docker compose exec -T api python -c "import urllib.request,sys; sys.exit(urllib.request.urlopen('http://localhost:8000/health').status!=200)" 2>/dev/null; then
     echo "deployed ${SHA} to ${ENV_NAME}"; exit 0
   fi
   sleep 2
