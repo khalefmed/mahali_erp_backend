@@ -192,6 +192,10 @@ SPECTACULAR_SETTINGS = {
     },
     "POSTPROCESSING_HOOKS": ["drf_spectacular.hooks.postprocess_schema_enums"],
     "SCHEMA_PATH_PREFIX": r"/api/v1",
+    # Pin the docs UIs: the default `latest` tags broke ReDoc when 3.x shipped.
+    "REDOC_DIST": "https://cdn.jsdelivr.net/npm/redoc@2.5.0",
+    "SWAGGER_UI_DIST": "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14",
+    "SWAGGER_UI_FAVICON_HREF": "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/favicon-32x32.png",
     "SECURITY": [{"jwtAuth": []}],
     "APPEND_COMPONENTS": {
         "securitySchemes": {"jwtAuth": {"type": "http", "scheme": "bearer", "bearerFormat": "JWT"}}
