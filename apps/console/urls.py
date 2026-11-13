@@ -25,5 +25,6 @@ urlpatterns = [
     path("console/me", views.ConsoleMeView.as_view()),
     path("console/dashboard", views.DashboardView.as_view()),
     path("console/settings", views.PlatformSettingsView.as_view()),
+    path("platform", views.PlatformInfoView.as_view()),
     *router.urls,
 ]

@@ -45,6 +45,10 @@ class PlatformSettings(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     @classmethod
+    def signups_are_open(cls) -> bool:
+        return cls.load().signups_open
+
+    @classmethod
     def load(cls) -> "PlatformSettings":
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj

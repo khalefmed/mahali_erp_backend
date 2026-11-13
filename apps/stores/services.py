@@ -29,6 +29,10 @@ MAX_STORES_IN_REVIEW = 3
 
 @transaction.atomic
 def create_store(user: User, **data) -> Store:
+    from apps.console.models import PlatformSettings
+
+    if not PlatformSettings.signups_are_open():
+        raise Forbidden("signups_closed", "New stores are closed for now.")
     in_review = Store.objects.filter(
         owner=user,
         status__in=[StoreStatus.DRAFT, StoreStatus.PENDING_APPROVAL, StoreStatus.INFO_REQUESTED],

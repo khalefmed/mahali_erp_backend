@@ -202,3 +202,9 @@ class ProductRequestDecisionSerializer(serializers.Serializer):
         queryset=Variant.objects.all(), required=False, allow_null=True
     )
     message = serializers.CharField(required=False, allow_blank=True, default="")
+
+
+class PlatformInfoSerializer(serializers.Serializer):
+    announcement = serializers.CharField(help_text="Banner to show to every merchant, or empty")
+    signups_open = serializers.BooleanField()
+    review_sla_hours = serializers.IntegerField(help_text="Promised review time for new stores")

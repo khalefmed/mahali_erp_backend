@@ -6,6 +6,7 @@ from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -42,6 +43,7 @@ from .serializers import (
     DecisionSerializer,
     ImpersonateSerializer,
     ImpersonationTokenSerializer,
+    PlatformInfoSerializer,
     PlatformSettingsSerializer,
     ProductRequestDecisionSerializer,
     StaffMeSerializer,
@@ -452,3 +454,15 @@ class PlatformSettingsView(ConsoleMixin, APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+@extend_schema(tags=["platform"])
+class PlatformInfoView(APIView):
+    """Public: what the Mahali team set in the console (SA-10)."""
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    @extend_schema(operation_id="platform_info", responses={200: PlatformInfoSerializer})
+    def get(self, request):
+        return Response(PlatformInfoSerializer(PlatformSettings.load()).data)

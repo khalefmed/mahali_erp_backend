@@ -159,11 +159,9 @@ REST_FRAMEWORK = {
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "Mahali ERP API",
-    "DESCRIPTION": (
-        "API of Mahali ERP. Errors use RFC 9457 problem details with a stable `code` "
-        "that the web app translates. Money is integer MRU. Store-scoped routes live "
-        "under `/api/v1/stores/{store_id}/`."
-    ),
+    # The integration guide is part of the schema, so /api/docs/, /api/redoc/ and the raw
+    # schema always carry the current version of it.
+    "DESCRIPTION": (BASE_DIR / "docs" / "integration.md").read_text(encoding="utf-8"),
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
