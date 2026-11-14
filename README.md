@@ -33,6 +33,11 @@ uv run python manage.py runserver
 
 Emails (verification codes, invitations) are printed in the runserver console locally.
 
+The other trades: `uv run python manage.py seed_trades --owner <email>` loads the
+Électroménager, Pharmacie and Quincaillerie catalogs and one active store per trade
+owned by `<email>` (stock, serial numbers, 7 days of sales; hardware sold by the metre
+and the kilo). The account is created if missing; a trade already present is skipped.
+
 ## For the web app
 
 - Generate the client: `OPENAPI_URL=http://localhost:8000/api/schema/ pnpm api:generate`
