@@ -3,7 +3,20 @@ from rest_framework import serializers
 from apps.accounts.serializers import UserSerializer
 from apps.catalog.models import Brand, Category, Product, Variant
 
-from .models import Order, OrderLine, OrderStatus, StoreOrder, StoreOrderLine, StoreOrderStatus
+from . import meysara
+from .models import (
+    InstalmentMethod,
+    MeysaraInstalment,
+    MeysaraPlan,
+    MeysaraPlanStatus,
+    Order,
+    OrderLine,
+    OrderStatus,
+    PaymentMethod,
+    StoreOrder,
+    StoreOrderLine,
+    StoreOrderStatus,
+)
 
 QUANTITY = {"max_digits": 12, "decimal_places": 3, "min_value": 0}
 
@@ -65,6 +78,19 @@ class ShopVariantSerializer(serializers.ModelSerializer):
         return obj.price is not None
 
 
+class FacetBrandSerializer(serializers.Serializer):
+    slug = serializers.CharField()
+    name = serializers.CharField()
+    count = serializers.IntegerField(help_text="Products of this brand in the listing")
+
+
+class ShopFacetsSerializer(serializers.Serializer):
+    brands = FacetBrandSerializer(many=True, help_text="Ignoring the `brand` filter itself")
+    min_price = serializers.IntegerField(allow_null=True)
+    max_price = serializers.IntegerField(allow_null=True)
+    count = serializers.IntegerField()
+
+
 class ShopProductDetailSerializer(ShopProductSerializer):
     attribute_schema = serializers.JSONField(source="category.attribute_schema")
     tracks_serial = serializers.BooleanField(source="category.tracks_serial")
@@ -119,6 +145,67 @@ class OrderCreateSerializer(CartSerializer):
     delivery_city = serializers.CharField(max_length=80)
     delivery_address = serializers.CharField(max_length=255)
     note = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+    payment_method = serializers.ChoiceField(
+        choices=PaymentMethod.choices, default=PaymentMethod.CASH_ON_DELIVERY
+    )
+    meysara_percent = serializers.ChoiceField(
+        choices=[(25, "25 %"), (50, "50 %"), (100, "100 %")],
+        required=False,
+        allow_null=True,
+        help_text="With payment_method=meysara: one of the offer's `choices`",
+    )
+
+
+# ---------------------------------------------------------------- Meysara
+
+
+class MeysaraOfferSerializer(serializers.Serializer):
+    eligible = serializers.BooleanField()
+    reason = serializers.ChoiceField(
+        choices=[(r, r) for r in meysara.Reason.ALL],
+        allow_null=True,
+        help_text="First rule that fails, when not eligible",
+    )
+    max_percent = serializers.IntegerField(allow_null=True)
+    choices = serializers.ListField(child=serializers.IntegerField(), help_text="Shares on offer")
+    paid_orders = serializers.IntegerField(help_text="Delivered and paid orders so far")
+    required_orders = serializers.IntegerField()
+    min_total = serializers.IntegerField(help_text="MRU")
+    max_financed = serializers.IntegerField(help_text="MRU")
+
+
+class MeysaraInstalmentSerializer(serializers.ModelSerializer):
+    status = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MeysaraInstalment
+        fields = ["number", "amount", "due_date", "paid_at", "paid_via", "status"]
+
+    def get_status(self, obj) -> str:
+        """paid · waiting_delivery · upcoming · due · overdue (more than 7 days late)"""
+        return meysara.instalment_status(obj)
+
+
+class MeysaraPlanSerializer(serializers.ModelSerializer):
+    status = serializers.ChoiceField(choices=MeysaraPlanStatus.choices)
+    instalments = MeysaraInstalmentSerializer(many=True)
+
+    class Meta:
+        model = MeysaraPlan
+        fields = [
+            "percent",
+            "financed",
+            "on_delivery",
+            "status",
+            "activated_at",
+            "closed_at",
+            "instalments",
+        ]
+
+
+class PayInstalmentSerializer(serializers.Serializer):
+    number = serializers.IntegerField(min_value=1, max_value=meysara.INSTALMENTS)
+    via = serializers.ChoiceField(choices=InstalmentMethod.choices)
 
 
 class OrderLineSerializer(serializers.ModelSerializer):
@@ -130,6 +217,8 @@ class OrderLineSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     lines = OrderLineSerializer(many=True)
     status = serializers.ChoiceField(choices=OrderStatus.choices)
+    payment_method = serializers.ChoiceField(choices=PaymentMethod.choices)
+    meysara = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
@@ -153,7 +242,13 @@ class OrderSerializer(serializers.ModelSerializer):
             "delivered_at",
             "cancelled_at",
             "lines",
+            "meysara",
         ]
+
+    def get_meysara(self, obj) -> MeysaraPlanSerializer(allow_null=True):
+        """The pay-in-4 plan, or null when the order is paid on delivery."""
+        plan = getattr(obj, "meysara_plan", None)
+        return MeysaraPlanSerializer(plan).data if plan else None
 
 
 # ---------------------------------------------------------------- stores (ERP)

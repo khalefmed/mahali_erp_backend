@@ -52,6 +52,17 @@ class PlatformSettings(models.Model):
         validators=[MinValueValidator(0), MaxValueValidator(100)],
         help_text="Added to the cheapest store price on the marketplace",
     )
+    # Meysara (pay in 4): rules in apps.marketplace.meysara.
+    meysara_enabled = models.BooleanField(default=True)
+    meysara_required_orders = models.PositiveSmallIntegerField(
+        default=3, help_text="Delivered and paid orders before Meysara opens"
+    )
+    meysara_min_total = models.PositiveIntegerField(
+        default=3000, help_text="MRU, smallest order that can use Meysara"
+    )
+    meysara_max_financed = models.PositiveIntegerField(
+        default=60000, help_text="MRU, largest share paid in instalments"
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     @classmethod

@@ -19,6 +19,8 @@ urlpatterns = [
     path("marketplace/auth/verify-email", views.CustomerVerifyEmailView.as_view()),
     path("marketplace/auth/login", views.CustomerLoginView.as_view()),
     path("marketplace/auth/logout", views.CustomerLogoutView.as_view()),
+    path("marketplace/auth/password/forgot", views.CustomerPasswordForgotView.as_view()),
+    path("marketplace/meysara/offer", views.MeysaraOfferView.as_view()),
     path("marketplace/me", views.CustomerMeView.as_view()),
     *router.urls,
 ]
