@@ -1,0 +1,2 @@
+{% autoescape off %}Mahali — commande {{ order.number }} reçue
+{% endautoescape %}

@@ -38,12 +38,19 @@ def _send_verification_code(user: User) -> None:
 
 @transaction.atomic
 def register(
-    *, email: str, password: str, full_name: str, phone: str = "", language: str = "fr"
+    *,
+    email: str,
+    password: str,
+    full_name: str,
+    phone: str = "",
+    language: str = "fr",
+    merchant: bool = True,
 ) -> None:
-    """Same response whether or not the email is taken (no account enumeration)."""
+    """Same response whether or not the email is taken (no account enumeration).
+    `merchant=False` for marketplace shoppers: closing merchant sign-ups does not stop them."""
     from apps.console.models import PlatformSettings
 
-    if not PlatformSettings.signups_are_open():
+    if merchant and not PlatformSettings.signups_are_open():
         raise Forbidden("signups_closed", "Sign-ups are closed for now.")
     email = email.strip().lower()
     existing = User.objects.filter(email__iexact=email).first()
@@ -78,7 +85,9 @@ def _start_session(user: User, request, realm: str) -> dict:
 
 
 @transaction.atomic
-def verify_email(request, *, email: str, code: str) -> tuple[User, dict]:
+def verify_email(
+    request, *, email: str, code: str, realm: str = UserSession.Realm.MERCHANT
+) -> tuple[User, dict]:
     user = User.objects.filter(email__iexact=email.strip()).first()
     record = None
     if user:
@@ -102,14 +111,14 @@ def verify_email(request, *, email: str, code: str) -> tuple[User, dict]:
     if not user.is_email_verified:
         user.email_verified_at = timezone.now()
         user.save(update_fields=["email_verified_at"])
-    return user, _start_session(user, request, UserSession.Realm.MERCHANT)
+    return user, _start_session(user, request, realm)
 
 
 def login(request, *, email: str, password: str, realm: str) -> tuple[User, dict]:
     user = authenticate(request, username=email.strip().lower(), password=password)
     if user is None:
         raise ApiError("invalid_credentials", "Email or password is incorrect.", status_code=401)
-    if realm == UserSession.Realm.MERCHANT and not user.is_email_verified:
+    if realm != UserSession.Realm.CONSOLE and not user.is_email_verified:
         raise Forbidden("email_not_verified", "Verify your email first.")
     if realm == UserSession.Realm.CONSOLE:
         staff = getattr(user, "platform_staff", None)

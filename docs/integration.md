@@ -79,6 +79,32 @@ Hide or disable UI with `permissions` (e.g. `sales.create`, `stock.receive`,
   Unpaid remainder becomes a credit (needs a customer). Corrections: `POST credit-notes`.
 - **Dashboard / reports:** `GET /stores/{id}/reports/summary?date_from=&date_to=`.
 
+## Marketplace
+
+One shop window for every store, sold under the Mahali brand: **stores are never shown**.
+A product's price is the cheapest store that has it in stock **plus the Mahali margin**
+(one percentage, set in `console/settings` → `marketplace_margin_percent`), rounded up to
+the MRU. Payment on delivery.
+
+- **Browse (no login):** `GET marketplace/categories` (with `product_count` in stock),
+  `GET marketplace/products?search=&trade=&category=<slug>&brand=<slug>&min_price=&max_price=&ordering=price|-price|-created_at`,
+  `GET marketplace/products/{id}` (variants with `price`, `available`, `max_quantity`).
+- **Cart:** kept by the app. `POST marketplace/cart/quote {lines: [{variant, quantity}]}`
+  prices it and flags unavailable lines.
+- **Shopper account:** `marketplace/auth/register` → `marketplace/auth/verify-email` (or
+  `marketplace/auth/login`) → customer tokens (`auth/refresh` to rotate,
+  `marketplace/auth/logout`). Merchant and customer tokens are not interchangeable.
+- **Order:** `POST marketplace/orders {lines, delivery_name, delivery_phone, delivery_city,
+  delivery_address, note?}`. Prices are fixed at that moment. Status: `pending` (stores
+  confirming) → `confirmed` → `ready` → `delivered`, or `cancelled` (shopper while
+  pending/confirmed, a store rejecting its part, or Mahali).
+- **Store side (ERP):** `GET stores/{id}/marketplace-orders` — the store's part at its
+  own prices, no customer data. `accept` (takes stock out; `serials` for products that
+  track them), `reject {reason}` (cancels the whole order), `ready`. Permission
+  `marketplace.orders` (owner, manager, stock keeper).
+- **Console:** `GET console/marketplace/orders` (with the stores to collect from),
+  `deliver`, `cancel {reason}` (stock goes back to the stores).
+
 ## Environments
 
 | | URL |

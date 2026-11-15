@@ -41,3 +41,43 @@ class EnableRowLevelSecurity(Operation):
 
     def deconstruct(self):
         return (f"{__name__}.{self.__class__.__name__}", [self.model_name], {})
+
+
+MARKETPLACE_POLICY = "marketplace_read"
+
+
+class AllowMarketplaceRead(Operation):
+    """Migration operation: a second, SELECT-only policy that lets the marketplace read a
+    store-scoped table across stores when `app.marketplace_read` is on (see
+    `apps.core.tenancy.enable_marketplace_read`). Policies are permissive, so this only
+    widens reads; inserts and updates still need the store policy."""
+
+    reduces_to_sql = True
+    reversible = True
+
+    def __init__(self, model_name: str):
+        self.model_name = model_name
+
+    def state_forwards(self, app_label, state):
+        pass
+
+    def database_forwards(self, app_label, schema_editor, from_state, to_state):
+        table = schema_editor.quote_name(
+            to_state.apps.get_model(app_label, self.model_name)._meta.db_table
+        )
+        schema_editor.execute(
+            f"CREATE POLICY {MARKETPLACE_POLICY} ON {table} FOR SELECT "
+            "USING (current_setting('app.marketplace_read', true) = 'on')"
+        )
+
+    def database_backwards(self, app_label, schema_editor, from_state, to_state):
+        table = schema_editor.quote_name(
+            from_state.apps.get_model(app_label, self.model_name)._meta.db_table
+        )
+        schema_editor.execute(f"DROP POLICY IF EXISTS {MARKETPLACE_POLICY} ON {table}")
+
+    def describe(self):
+        return f"Allow marketplace reads on {self.model_name}"
+
+    def deconstruct(self):
+        return (f"{__name__}.{self.__class__.__name__}", [self.model_name], {})

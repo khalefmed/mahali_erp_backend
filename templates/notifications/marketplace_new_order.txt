@@ -1,0 +1,9 @@
+{% autoescape off %}Bonjour,
+
+{{ store.name }} a reçu une commande de la marketplace Mahali : {{ order.number }}, {{ lines }} article(s), {{ total }} MRU à vos prix.
+
+Acceptez-la (ou refusez-la) dans Mahali, menu Marketplace : {{ web_app_url }}
+Une fois acceptée, la marchandise sort de votre stock. Préparez-la, puis marquez-la « prête » : l'équipe Mahali passe la récupérer.
+
+L'équipe Mahali
+{% endautoescape %}

@@ -34,6 +34,7 @@ class Perm:
     CREDITS_MANAGE = "credits.manage"
     EXPENSES_MANAGE = "expenses.manage"
     REPORTS_VIEW = "reports.view"
+    MARKETPLACE_ORDERS = "marketplace.orders"
 
 
 _ALL = {v for k, v in vars(Perm).items() if k.isupper()}
@@ -64,6 +65,7 @@ ROLE_PERMISSIONS: dict[str, frozenset[str]] = {
             Perm.STOCK_RECEIVE,
             Perm.STOCK_ADJUST,
             Perm.SUPPLIERS_MANAGE,
+            Perm.MARKETPLACE_ORDERS,
         }
     ),
     Role.SELLER: frozenset(

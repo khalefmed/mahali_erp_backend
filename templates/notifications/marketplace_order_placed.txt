@@ -1,0 +1,7 @@
+{% autoescape off %}Bonjour {{ user.full_name }},
+
+Merci pour votre commande {{ order.number }} ({{ order.total }} MRU, paiement à la livraison).
+Nous la préparons et vous contactons au {{ order.delivery_phone }} pour la livraison à {{ order.delivery_city }}.
+
+L'équipe Mahali
+{% endautoescape %}

@@ -20,10 +20,16 @@ uv run python manage.py migrate
 uv run python manage.py seed_demo --password '<pwd>'   # Téléphones demo data
 uv run python manage.py runserver          # http://localhost:8000/api/docs/
 uv run pytest                              # all tests (reuses the test DB)
+uv run pytest --create-db                  # after migration changes (--reuse-db is the default)
 uv run pytest apps/sales/tests/test_selling.py -k imei   # one test
 uv run ruff check . && uv run ruff format .
 uv run python manage.py spectacular --file openapi/schema.yaml --validate --fail-on-warn
 ```
+
+Local services use non-default ports (Postgres `5433`, Redis `6381`); `.env.example`
+already points there. CI (`.github/workflows/ci.yml`) also runs
+`makemigrations --check --dry-run`, `ruff format --check`, `bandit -c pyproject.toml -r apps config`
+and `pip-audit --strict` — run them locally before a PR that touches models or dependencies.
 
 ## Architecture
 
@@ -40,6 +46,8 @@ apps/inventory          StoreProduct, SerialUnit (IMEI), StockMovement, Supplier
 apps/sales              Customer, CashSession (Z), Sale, Payment, Credit, CreditNote, Expense
 apps/reports            read-only selectors
 apps/console            Mahali team API (/api/v1/console/…): PlatformStaff, reviews, notes
+apps/marketplace        shop window (public), shoppers (realm `customer`), Order split
+                        into store-scoped StoreOrders; price = cheapest store + margin
 ```
 
 Each app: `models.py`, `services.py` (writes, business rules, transactions),
@@ -59,6 +67,11 @@ Each app: `models.py`, `services.py` (writes, business rules, transactions),
   `activate_store()` (SET LOCAL, lives until the request transaction ends).
   Outside requests (commands, tests) use `with store_context(store.id):`.
 - With no store activated, store-scoped queries return nothing. Don't "fix" that.
+- The only cross-store reads are the marketplace's: `enable_marketplace_read()` /
+  `with marketplace_read():` turn on a SELECT-only policy (`AllowMarketplaceRead` in a
+  migration) on `storeproduct`, `storeorder`, `storeorderline`. Writes always go through
+  `store_context(store_id)`. Don't add that policy elsewhere without a reason, and never
+  expose store identity or costs to shoppers.
 
 **Permissions.** Roles and permission codes live only in `apps/stores/roles.py`.
 Views declare `required_permissions = {action | METHOD | "*": Perm.X}`; console views
@@ -88,9 +101,14 @@ Console "log in as" = read-only merchant session for one store, 30 min.
 on commit; templates in `templates/notifications/`. SMS will plug in there later.
 
 **OpenAPI is the contract.** After any API change, regenerate `openapi/schema.yaml`
-(CI fails if it is stale or has warnings) and mention the change in the PR.
+(CI fails if it is stale or has warnings), add an entry to `CHANGELOG.md` (newest first,
+what the web app must handle) and mention the change in the PR. `docs/integration.md`
+is not loose documentation: `settings.py` loads it as the schema `DESCRIPTION`, so it is
+the public guide shown at `/api/redoc/` — editing it changes the schema too.
 
 ## Workflow: one issue → one branch → one PR
+
+The project skill `.claude/skills/work-on-issue` runs this flow end to end.
 
 1. `gh issue view <n>`.
 2. `git switch main && git pull --ff-only && git switch -c feat/<n>-short-name` (`fix/…`).

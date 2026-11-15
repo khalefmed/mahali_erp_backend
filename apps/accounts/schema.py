@@ -20,3 +20,16 @@ class ConsoleJWTScheme(OpenApiAuthenticationExtension):
             "bearerFormat": "JWT",
             "description": "Console (Mahali team) token from console/auth/login",
         }
+
+
+class CustomerJWTScheme(OpenApiAuthenticationExtension):
+    target_class = "apps.accounts.authentication.CustomerJWTAuthentication"
+    name = "customerJwtAuth"
+
+    def get_security_definition(self, auto_schema):
+        return {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+            "description": "Marketplace shopper token from marketplace/auth/login",
+        }
