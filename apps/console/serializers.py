@@ -197,6 +197,10 @@ class PlatformSettingsSerializer(serializers.ModelSerializer):
             "announcement",
             "signups_open",
             "marketplace_margin_percent",
+            "meysara_enabled",
+            "meysara_required_orders",
+            "meysara_min_total",
+            "meysara_max_financed",
             "updated_at",
         ]
         read_only_fields = ["updated_at"]

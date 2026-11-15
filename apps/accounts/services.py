@@ -138,13 +138,18 @@ def revoke_all_sessions(user: User, *, except_session_id=None) -> None:
     sessions.update(revoked_at=timezone.now())
 
 
-def request_password_reset(email: str) -> None:
+def request_password_reset(email: str, *, shop: bool = False) -> None:
+    """Emails a reset link: to the ERP web app, or to the marketplace when `shop`."""
     user = User.objects.filter(email__iexact=email.strip(), is_active=True).first()
     if not user:
         return
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
-    link = f"{settings.WEB_APP_URL}/{user.language}/reset-password?uid={uid}&token={token}"
+    if shop:
+        page = f"{settings.MARKETPLACE_URL}/{user.language}/mot-de-passe/nouveau"
+    else:
+        page = f"{settings.WEB_APP_URL}/{user.language}/reset-password"
+    link = f"{page}?uid={uid}&token={token}"
     notify(
         user,
         "password_reset",
