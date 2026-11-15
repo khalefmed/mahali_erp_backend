@@ -27,11 +27,12 @@ from apps.inventory.models import MovementKind, SerialStatus, SerialUnit, StoreP
 from apps.inventory.services import lock_products, move
 from apps.stores.models import Store
 
-from . import selectors
+from . import meysara, selectors
 from .models import (
     Order,
     OrderLine,
     OrderStatus,
+    PaymentMethod,
     StoreOrder,
     StoreOrderLine,
     StoreOrderStatus,
@@ -123,11 +124,29 @@ def _description(variant) -> str:
 
 
 @transaction.atomic
-def place_order(customer, *, lines: list[dict], delivery: dict, note: str = "") -> Order:
+def place_order(
+    customer,
+    *,
+    lines: list[dict],
+    delivery: dict,
+    note: str = "",
+    payment_method: str = PaymentMethod.CASH_ON_DELIVERY,
+    meysara_percent: int | None = None,
+) -> Order:
     if not lines:
         raise ApiError("empty_cart", "Add at least one product.", extra={"field": "lines"})
+    if payment_method == PaymentMethod.MEYSARA:
+        if meysara_percent is None:
+            raise ApiError(
+                "meysara_percent_required",
+                "Choose the share paid with Meysara.",
+                extra={"field": "meysara_percent"},
+            )
+        # One checkout at a time per shopper: the "one plan" rule must hold.
+        type(customer).objects.select_for_update().get(pk=customer.pk)
     priced, total = price_lines(lines, strict=True)
     order = Order.objects.create(
+        payment_method=payment_method,
         number=selectors.next_order_number(),
         customer=customer,
         margin_percent=selectors.margin_percent(),
@@ -147,6 +166,8 @@ def place_order(customer, *, lines: list[dict], delivery: dict, note: str = "") 
             line_total=line.line_total,
         )
         by_store[line.offer.store_id].append((line, order_line))
+    if payment_method == PaymentMethod.MEYSARA:
+        meysara.reserve(order, meysara_percent)
 
     for store_id, items in by_store.items():
         with store_context(store_id):
@@ -345,6 +366,7 @@ def cancel_order(order: Order, *, reason: str, actor) -> Order:
                     "marketplace_store_order_cancelled",
                     {"store": store, "order": order},
                 )
+    meysara.cancel(order)
     order.status = OrderStatus.CANCELLED
     order.cancel_reason = reason
     order.cancelled_at = timezone.now()
@@ -414,4 +436,5 @@ def deliver(order: Order, actor) -> Order:
     order.status = OrderStatus.DELIVERED
     order.delivered_at = now
     order.save(update_fields=["status", "delivered_at", "updated_at"])
+    meysara.activate(order, timezone.localdate())
     return order

@@ -23,6 +23,11 @@ class OrderStatus(models.TextChoices):
     CANCELLED = "cancelled", "Annulée"
 
 
+class PaymentMethod(models.TextChoices):
+    CASH_ON_DELIVERY = "cash_on_delivery", "Paiement à la livraison"
+    MEYSARA = "meysara", "Meysara (en 4 fois)"
+
+
 class Order(BaseModel):
     number = models.CharField(max_length=20, unique=True)
     customer = models.ForeignKey(
@@ -35,7 +40,9 @@ class Order(BaseModel):
     subtotal = models.PositiveIntegerField(help_text="MRU, customer prices")
     delivery_fee = models.PositiveIntegerField(default=0)
     total = models.PositiveIntegerField()
-    payment_method = models.CharField(max_length=20, default="cash_on_delivery")
+    payment_method = models.CharField(
+        max_length=20, choices=PaymentMethod.choices, default=PaymentMethod.CASH_ON_DELIVERY
+    )
     delivery_name = models.CharField(max_length=120)
     delivery_phone = models.CharField(max_length=32)
     delivery_city = models.CharField(max_length=80)
@@ -109,6 +116,65 @@ class StoreOrderLine(StoreScopedModel):
     unit_price = models.PositiveIntegerField(help_text="MRU, store price")
     line_total = models.PositiveIntegerField()
     serials = models.JSONField(default=list, blank=True, help_text="Set when accepted")
+
+
+class MeysaraPlanStatus(models.TextChoices):
+    RESERVED = "reserved", "Réservé (avant livraison)"
+    ACTIVE = "active", "En cours"
+    PAID = "paid", "Soldé"
+    CANCELLED = "cancelled", "Annulé"
+
+
+class InstalmentMethod(models.TextChoices):
+    BANKILY = "bankily", "Bankily"
+    MASRVI = "masrvi", "Masrvi"
+    SEDAD = "sedad", "Sedad"
+    CASH = "cash", "Espèces (commerçant partenaire)"
+
+
+class MeysaraPlan(BaseModel):
+    """Meysara (Infinity's pay-in-4): part of an order paid in 4 instalments, no fees.
+
+    Reserved when the order is placed, active once delivered (instalments get their due
+    dates then), paid when every instalment is in, cancelled with the order.
+    Rules: `apps.marketplace.meysara`."""
+
+    order = models.OneToOneField(Order, on_delete=models.PROTECT, related_name="meysara_plan")
+    customer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="meysara_plans"
+    )
+    percent = models.PositiveSmallIntegerField(help_text="Share of the order: 25, 50 or 100")
+    financed = models.PositiveIntegerField(help_text="MRU paid in 4 instalments")
+    on_delivery = models.PositiveIntegerField(help_text="MRU paid to the courier")
+    status = models.CharField(
+        max_length=10,
+        choices=MeysaraPlanStatus.choices,
+        default=MeysaraPlanStatus.RESERVED,
+        db_index=True,
+    )
+    activated_at = models.DateTimeField(null=True, blank=True)
+    closed_at = models.DateTimeField(null=True, blank=True, help_text="Paid off or cancelled")
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
+class MeysaraInstalment(BaseModel):
+    plan = models.ForeignKey(MeysaraPlan, on_delete=models.CASCADE, related_name="instalments")
+    number = models.PositiveSmallIntegerField()
+    amount = models.PositiveIntegerField()
+    due_date = models.DateField(null=True, blank=True, help_text="Set at delivery")
+    paid_at = models.DateTimeField(null=True, blank=True)
+    paid_via = models.CharField(max_length=10, choices=InstalmentMethod.choices, blank=True)
+    recorded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+
+    class Meta:
+        ordering = ["number"]
+        constraints = [
+            models.UniqueConstraint(fields=["plan", "number"], name="uniq_meysara_instalment")
+        ]
 
 
 class OrderSequence(models.Model):

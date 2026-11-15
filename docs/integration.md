@@ -98,6 +98,18 @@ the MRU. Payment on delivery.
   delivery_address, note?}`. Prices are fixed at that moment. Status: `pending` (stores
   confirming) → `confirmed` → `ready` → `delivered`, or `cancelled` (shopper while
   pending/confirmed, a store rejecting its part, or Mahali).
+- **Listing filters:** `GET marketplace/products/facets` with the list's query → brands
+  (with counts, ignoring `brand`) and the price range.
+- **Meysara (pay in 4, no fees):** `GET marketplace/meysara/offer?total=` says whether the
+  shopper may pay part of this order in 4 instalments and which shares (`choices`): opens
+  after 3 delivered and paid orders, up to 50 %, then 100 % once a plan was paid on time;
+  closed while a plan runs or an instalment is more than 7 days late; total ≥ 3 000 MRU,
+  financed ≤ 60 000 MRU (settings in `console/settings`). Order with
+  `payment_method: "meysara", meysara_percent`. The rest is paid on delivery; instalments
+  fall due every 14 days from delivery. The order's `meysara` block has the schedule; the
+  Mahali team records payments (`console/marketplace/orders/{id}/meysara/pay`).
+- **Shopper password reset:** `marketplace/auth/password/forgot` (link to the
+  marketplace), then the shared `auth/password/reset`.
 - **Store side (ERP):** `GET stores/{id}/marketplace-orders` — the store's part at its
   own prices, no customer data. `accept` (takes stock out; `serials` for products that
   track them), `reject {reason}` (cancels the whole order), `ready`. Permission

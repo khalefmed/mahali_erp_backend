@@ -1,7 +1,7 @@
 import django_filters
-from django.db.models import Q
+from django.db.models import Count, Max, Min, Q
 from drf_spectacular.utils import extend_schema
-from rest_framework import filters, generics, mixins, status, viewsets
+from rest_framework import filters, generics, mixins, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -12,11 +12,13 @@ from apps.accounts.authentication import CustomerJWTAuthentication
 from apps.accounts.models import UserSession
 from apps.accounts.serializers import (
     AuthResponseSerializer,
+    EmailSerializer,
     LoginSerializer,
     RegisterSerializer,
     UserSerializer,
     VerifyEmailSerializer,
 )
+from apps.accounts.throttles import AuthIpThrottle, EmailCodeThrottle
 from apps.accounts.views import LoginView, PublicAuthView
 from apps.catalog.models import Product
 from apps.console.views import ConsoleMixin
@@ -25,21 +27,28 @@ from apps.stores.access import StoreScopedViewMixin
 from apps.stores.models import Trade
 from apps.stores.roles import Perm
 
-from . import selectors, services
+from . import meysara, selectors, services
 from .models import Order, StoreOrder
 from .serializers import (
     AcceptSerializer,
     CartSerializer,
     ConsoleOrderSerializer,
+    MeysaraOfferSerializer,
     OrderCreateSerializer,
     OrderSerializer,
+    PayInstalmentSerializer,
     QuoteSerializer,
     ReasonSerializer,
     ShopCategorySerializer,
+    ShopFacetsSerializer,
     ShopProductDetailSerializer,
     ShopProductSerializer,
     StoreOrderSerializer,
 )
+
+
+class MeysaraTotalSerializer(serializers.Serializer):
+    total = serializers.IntegerField(min_value=0, help_text="Order total in MRU (cart quote)")
 
 
 class MarketplaceReadMixin:
@@ -117,6 +126,42 @@ class ShopProductViewSet(PublicMixin, MarketplaceReadMixin, viewsets.ReadOnlyMod
     @extend_schema(operation_id="marketplace_products_list")
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
+
+    @extend_schema(
+        operation_id="marketplace_products_facets",
+        responses={200: ShopFacetsSerializer},
+        description="Filters for a listing: same query as the list (`trade`, `category`, "
+        "`search`, prices). Brands ignore the `brand` filter so the shopper can switch.",
+    )
+    @action(detail=False, methods=["get"])
+    def facets(self, request):
+        listing = self.filter_queryset(self.get_queryset())
+        without_brand = request.query_params.copy()
+        without_brand.pop("brand", None)
+        brand_base = ShopProductFilter(
+            without_brand, queryset=self.get_queryset(), request=request
+        ).qs
+        brand_base = filters.SearchFilter().filter_queryset(request, brand_base, self)
+        ids = Product.objects.filter(pk__in=brand_base.values("pk"), brand__isnull=False)
+        brands = (
+            ids.values("brand__slug", "brand__name")
+            .annotate(count=Count("pk"))
+            .order_by("brand__name")
+        )
+        bounds = listing.aggregate(min_price=Min("price"), max_price=Max("price"))
+        return Response(
+            ShopFacetsSerializer(
+                {
+                    "brands": [
+                        {"slug": b["brand__slug"], "name": b["brand__name"], "count": b["count"]}
+                        for b in brands
+                    ],
+                    "min_price": bounds["min_price"],
+                    "max_price": bounds["max_price"],
+                    "count": listing.count(),
+                }
+            ).data
+        )
 
     @extend_schema(
         operation_id="marketplace_products_retrieve",
@@ -212,12 +257,48 @@ class CustomerLogoutView(CustomerMixin, APIView):
 
 
 @extend_schema(tags=["marketplace: auth"])
+class CustomerPasswordForgotView(PublicAuthView):
+    throttle_classes = [AuthIpThrottle, EmailCodeThrottle]
+
+    @extend_schema(
+        operation_id="marketplace_auth_password_forgot",
+        request=EmailSerializer,
+        responses={202: None},
+        description="Like `auth/password/forgot`, but the link opens the marketplace: "
+        "`{MARKETPLACE_URL}/{lang}/mot-de-passe/nouveau?uid=…&token=…` (30 min). Then the "
+        "shared `auth/password/reset`. Always 202.",
+    )
+    def post(self, request):
+        account_services.request_password_reset(self.validated(EmailSerializer)["email"], shop=True)
+        return Response(status=status.HTTP_202_ACCEPTED)
+
+
+@extend_schema(tags=["marketplace: auth"])
 class CustomerMeView(CustomerMixin, generics.RetrieveUpdateAPIView):
     serializer_class = UserSerializer
     http_method_names = ["get", "patch"]
 
     def get_object(self):
         return self.request.user
+
+
+# ---------------------------------------------------------------- Meysara
+
+
+@extend_schema(tags=["marketplace: orders"])
+class MeysaraOfferView(CustomerMixin, APIView):
+    @extend_schema(
+        operation_id="marketplace_meysara_offer",
+        parameters=[MeysaraTotalSerializer],
+        responses={200: MeysaraOfferSerializer},
+        description="Can the signed-in shopper pay this order total in 4 instalments, and "
+        "which shares? Rules in the Meysara spec; `reason` = first rule that fails.",
+    )
+    def get(self, request):
+        query = MeysaraTotalSerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        offer = meysara.offer(request.user, query.validated_data["total"])
+        return Response(MeysaraOfferSerializer(offer).data)
 
 
 # ---------------------------------------------------------------- customer orders
@@ -241,23 +322,39 @@ class CustomerOrderViewSet(
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return Order.objects.none()
-        return Order.objects.filter(customer=self.request.user).prefetch_related("lines")
+        return (
+            Order.objects.filter(customer=self.request.user)
+            .select_related("meysara_plan")
+            .prefetch_related("lines", "meysara_plan__instalments")
+        )
 
     @extend_schema(
         operation_id="marketplace_orders_create",
         request=OrderCreateSerializer,
         responses={201: OrderSerializer},
         description="Each line goes to the cheapest store able to serve it; prices are "
-        "fixed now. Errors: `empty_cart`, `insufficient_stock` (409, with `field`, "
-        "`available`), `invalid_quantity`, `whole_quantity_required`.",
+        "fixed now. `payment_method=meysara` with `meysara_percent` (one of the offer's "
+        "`choices`) reserves a pay-in-4 plan. Errors: `empty_cart`, `insufficient_stock` "
+        "(409, with `field`, `available`), `invalid_quantity`, `whole_quantity_required`, "
+        "`meysara_percent_required`, `meysara_not_allowed` (409, with `reason`).",
     )
     def create(self, request, *args, **kwargs):
         serializer = OrderCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = dict(serializer.validated_data)
         lines, note = data.pop("lines"), data.pop("note", "")
-        order = services.place_order(request.user, lines=lines, delivery=data, note=note)
-        return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
+        order = services.place_order(
+            request.user,
+            lines=lines,
+            delivery=data,
+            note=note,
+            payment_method=data.pop("payment_method"),
+            meysara_percent=data.pop("meysara_percent", None),
+        )
+        return Response(
+            OrderSerializer(self.get_queryset().get(pk=order.pk)).data,
+            status=status.HTTP_201_CREATED,
+        )
 
     @extend_schema(
         operation_id="marketplace_orders_cancel",
@@ -349,8 +446,9 @@ class ConsoleOrderViewSet(ConsoleMixin, MarketplaceReadMixin, viewsets.ReadOnlyM
     search_fields = ["number", "customer__email", "delivery_phone", "delivery_name"]
 
     def get_queryset(self):
-        return Order.objects.select_related("customer").prefetch_related(
+        return Order.objects.select_related("customer", "meysara_plan").prefetch_related(
             "lines",
+            "meysara_plan__instalments",
             "store_orders__store",
             "store_orders__lines__order_line",
             "store_orders__lines__store_product__variant__product__category",
@@ -370,6 +468,21 @@ class ConsoleOrderViewSet(ConsoleMixin, MarketplaceReadMixin, viewsets.ReadOnlyM
     def deliver(self, request, pk=None):
         order = services.deliver(self.get_object(), request.user)
         return self._respond(order)
+
+    @extend_schema(
+        operation_id="console_marketplace_orders_meysara_pay",
+        request=PayInstalmentSerializer,
+        responses={200: ConsoleOrderSerializer},
+        description="Records a Meysara instalment the shopper paid. The last one closes the "
+        "plan. Errors: `not_a_meysara_order`, `meysara_plan_not_active` (409, before "
+        "delivery), `invalid_instalment`, `instalment_already_paid` (409).",
+    )
+    @action(detail=True, methods=["post"], url_path="meysara/pay")
+    def meysara_pay(self, request, pk=None):
+        serializer = PayInstalmentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        meysara.pay(self.get_object(), actor=request.user, **serializer.validated_data)
+        return self._respond(self.get_object())
 
     @extend_schema(
         operation_id="console_marketplace_orders_cancel",

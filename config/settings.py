@@ -14,6 +14,8 @@ DEBUG = env.bool("DJANGO_DEBUG", default=False)
 SECRET_KEY = env("DJANGO_SECRET_KEY")
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=[])
 WEB_APP_URL = env("WEB_APP_URL", default="http://localhost:3000").rstrip("/")
+# Shoppers' e-mails (password reset) link to the marketplace web app.
+MARKETPLACE_URL = env("MARKETPLACE_URL", default="http://localhost:3000").rstrip("/")
 ADMIN_PATH = env("DJANGO_ADMIN_PATH", default="")
 
 INSTALLED_APPS = [
@@ -181,6 +183,9 @@ SPECTACULAR_SETTINGS = {
         "ProductRequestStatusEnum": "apps.catalog.models.ProductRequestStatus",
         "MarketplaceOrderStatusEnum": "apps.marketplace.models.OrderStatus",
         "StoreOrderStatusEnum": "apps.marketplace.models.StoreOrderStatus",
+        "MarketplacePaymentMethodEnum": "apps.marketplace.models.PaymentMethod",
+        "MeysaraPlanStatusEnum": "apps.marketplace.models.MeysaraPlanStatus",
+        "InstalmentMethodEnum": "apps.marketplace.models.InstalmentMethod",
         "SaleStatusEnum": "apps.sales.models.Sale.Status",
         "CashSessionStatusEnum": "apps.sales.models.CashSession.Status",
         "CreditStatusEnum": "apps.sales.models.Credit.Status",
