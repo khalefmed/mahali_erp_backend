@@ -1,0 +1,6 @@
+{% autoescape off %}Bonjour,
+
+La commande marketplace {{ order.number }} a été annulée. Les articles que {{ store.name }} avait acceptés sont revenus dans votre stock : vous pouvez les remettre en rayon.
+
+L'équipe Mahali
+{% endautoescape %}

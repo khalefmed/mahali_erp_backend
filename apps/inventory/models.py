@@ -72,6 +72,7 @@ class MovementKind(models.TextChoices):
     SALE = "sale", "Vente"
     RETURN = "return", "Retour client"
     ADJUSTMENT = "adjustment", "Ajustement"
+    MARKETPLACE = "marketplace", "Marketplace"
 
 
 class StockMovement(StoreScopedModel):

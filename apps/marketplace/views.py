@@ -1,0 +1,388 @@
+import django_filters
+from django.db.models import Q
+from drf_spectacular.utils import extend_schema
+from rest_framework import filters, generics, mixins, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from apps.accounts import services as account_services
+from apps.accounts.authentication import CustomerJWTAuthentication
+from apps.accounts.models import UserSession
+from apps.accounts.serializers import (
+    AuthResponseSerializer,
+    LoginSerializer,
+    RegisterSerializer,
+    UserSerializer,
+    VerifyEmailSerializer,
+)
+from apps.accounts.views import LoginView, PublicAuthView
+from apps.catalog.models import Product
+from apps.console.views import ConsoleMixin
+from apps.core.tenancy import enable_marketplace_read
+from apps.stores.access import StoreScopedViewMixin
+from apps.stores.models import Trade
+from apps.stores.roles import Perm
+
+from . import selectors, services
+from .models import Order, StoreOrder
+from .serializers import (
+    AcceptSerializer,
+    CartSerializer,
+    ConsoleOrderSerializer,
+    OrderCreateSerializer,
+    OrderSerializer,
+    QuoteSerializer,
+    ReasonSerializer,
+    ShopCategorySerializer,
+    ShopProductDetailSerializer,
+    ShopProductSerializer,
+    StoreOrderSerializer,
+)
+
+
+class MarketplaceReadMixin:
+    """Views that read across stores (inside the request transaction)."""
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        enable_marketplace_read()
+
+
+class PublicMixin:
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+
+class CustomerMixin:
+    authentication_classes = [CustomerJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+
+# ---------------------------------------------------------------- shop window
+
+
+@extend_schema(tags=["marketplace: shop"])
+class ShopCategoryView(PublicMixin, MarketplaceReadMixin, generics.ListAPIView):
+    """Active categories with how many products are in stock (hide the empty ones)."""
+
+    serializer_class = ShopCategorySerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return selectors.categories()
+
+    @extend_schema(operation_id="marketplace_categories_list")
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+
+class ShopProductFilter(django_filters.FilterSet):
+    trade = django_filters.ChoiceFilter(field_name="category__trade", choices=Trade.choices)
+    category = django_filters.CharFilter(
+        method="filter_category", help_text="Category slug (includes its sub-categories)"
+    )
+    brand = django_filters.CharFilter(field_name="brand__slug", help_text="Brand slug")
+    min_price = django_filters.NumberFilter(field_name="price", lookup_expr="gte")
+    max_price = django_filters.NumberFilter(field_name="price", lookup_expr="lte")
+
+    class Meta:
+        model = Product
+        fields = ["trade", "category", "brand", "min_price", "max_price"]
+
+    def filter_category(self, queryset, name, value):
+        return queryset.filter(Q(category__slug=value) | Q(category__parent__slug=value))
+
+
+@extend_schema(tags=["marketplace: shop"])
+class ShopProductViewSet(PublicMixin, MarketplaceReadMixin, viewsets.ReadOnlyModelViewSet):
+    """Products in stock somewhere, priced from the cheapest store plus the Mahali margin.
+    Stores are never named."""
+
+    serializer_class = ShopProductSerializer
+    filterset_class = ShopProductFilter
+    filter_backends = [
+        django_filters.rest_framework.DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+    search_fields = ["name", "name_ar", "brand__name", "category__name", "variants__barcode"]
+    ordering_fields = ["price", "created_at", "name"]
+    ordering = ["-created_at"]
+
+    def get_queryset(self):
+        return selectors.products(selectors.margin_percent()).distinct()
+
+    @extend_schema(operation_id="marketplace_products_list")
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(
+        operation_id="marketplace_products_retrieve",
+        responses={200: ShopProductDetailSerializer},
+        description="Variants out of stock come back with `price: null, available: false`.",
+    )
+    def retrieve(self, request, *args, **kwargs):
+        product = self.get_object()
+        variants = selectors.variants_of(product, selectors.margin_percent())
+        data = ShopProductDetailSerializer(product, context={"variants": variants}).data
+        return Response(data)
+
+
+@extend_schema(tags=["marketplace: shop"])
+class QuoteView(PublicMixin, APIView):
+    @extend_schema(
+        operation_id="marketplace_cart_quote",
+        request=CartSerializer,
+        responses={200: QuoteSerializer},
+        description="Prices a cart kept by the app (no login needed). Unavailable lines come "
+        "back with `available: false` and the largest quantity one store can serve. "
+        "Errors: `invalid_quantity`, `whole_quantity_required`.",
+    )
+    def post(self, request):
+        serializer = CartSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        lines, total = services.price_lines(serializer.validated_data["lines"], strict=False)
+        return Response(QuoteSerializer({"lines": lines, "total": total}).data)
+
+
+# ---------------------------------------------------------------- customer accounts
+
+
+@extend_schema(tags=["marketplace: auth"])
+class CustomerRegisterView(PublicAuthView):
+    @extend_schema(
+        operation_id="marketplace_auth_register",
+        request=RegisterSerializer,
+        responses={202: None},
+        description="Same as `auth/register` for shoppers (works even when merchant sign-ups "
+        "are closed). Then `marketplace/auth/verify-email`.",
+    )
+    def post(self, request):
+        account_services.register(**self.validated(RegisterSerializer), merchant=False)
+        return Response(status=status.HTTP_202_ACCEPTED)
+
+
+@extend_schema(tags=["marketplace: auth"])
+class CustomerVerifyEmailView(PublicAuthView):
+    @extend_schema(
+        operation_id="marketplace_auth_verify_email",
+        request=VerifyEmailSerializer,
+        responses={200: AuthResponseSerializer},
+        description="Errors: `invalid_code` (with `attempts_left`), `code_expired`. "
+        "Signs the shopper in (customer tokens).",
+    )
+    def post(self, request):
+        user, tokens = account_services.verify_email(
+            request,
+            **self.validated(VerifyEmailSerializer),
+            realm=UserSession.Realm.CUSTOMER,
+        )
+        return Response({**tokens, "user": UserSerializer(user).data})
+
+
+@extend_schema(tags=["marketplace: auth"])
+class CustomerLoginView(LoginView):
+    realm = UserSession.Realm.CUSTOMER
+
+    @extend_schema(
+        operation_id="marketplace_auth_login",
+        request=LoginSerializer,
+        responses={200: AuthResponseSerializer},
+        description="Errors: `invalid_credentials` (401), `email_not_verified` (403). "
+        "Refresh with the shared `auth/refresh`.",
+    )
+    def post(self, request):
+        return super().post(request)
+
+
+@extend_schema(tags=["marketplace: auth"])
+class CustomerLogoutView(CustomerMixin, APIView):
+    @extend_schema(
+        operation_id="marketplace_auth_logout",
+        request={
+            "application/json": {"type": "object", "properties": {"refresh": {"type": "string"}}}
+        },
+        responses={204: None},
+    )
+    def post(self, request):
+        account_services.logout(request.data.get("refresh"), getattr(request, "user_session", None))
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(tags=["marketplace: auth"])
+class CustomerMeView(CustomerMixin, generics.RetrieveUpdateAPIView):
+    serializer_class = UserSerializer
+    http_method_names = ["get", "patch"]
+
+    def get_object(self):
+        return self.request.user
+
+
+# ---------------------------------------------------------------- customer orders
+
+
+@extend_schema(tags=["marketplace: orders"])
+class CustomerOrderViewSet(
+    CustomerMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
+):
+    """The shopper's own orders. Payment on delivery."""
+
+    serializer_class = OrderSerializer
+    filterset_fields = ["status"]
+
+    queryset = Order.objects.none()  # for the schema; see get_queryset
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Order.objects.none()
+        return Order.objects.filter(customer=self.request.user).prefetch_related("lines")
+
+    @extend_schema(
+        operation_id="marketplace_orders_create",
+        request=OrderCreateSerializer,
+        responses={201: OrderSerializer},
+        description="Each line goes to the cheapest store able to serve it; prices are "
+        "fixed now. Errors: `empty_cart`, `insufficient_stock` (409, with `field`, "
+        "`available`), `invalid_quantity`, `whole_quantity_required`.",
+    )
+    def create(self, request, *args, **kwargs):
+        serializer = OrderCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = dict(serializer.validated_data)
+        lines, note = data.pop("lines"), data.pop("note", "")
+        order = services.place_order(request.user, lines=lines, delivery=data, note=note)
+        return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
+
+    @extend_schema(
+        operation_id="marketplace_orders_cancel",
+        request=None,
+        responses={200: OrderSerializer},
+        description="While `pending` or `confirmed`. Errors: `order_not_cancellable` (409).",
+    )
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        return Response(OrderSerializer(services.cancel_by_customer(self.get_object())).data)
+
+
+# ---------------------------------------------------------------- stores (ERP)
+
+
+@extend_schema(tags=["stores: marketplace"])
+class StoreOrderViewSet(
+    StoreScopedViewMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
+):
+    """Marketplace orders for this store: accept (takes stock out), reject, mark ready."""
+
+    serializer_class = StoreOrderSerializer
+    filterset_fields = ["status"]
+    required_permissions = {"*": Perm.MARKETPLACE_ORDERS}
+
+    def get_queryset(self):
+        return StoreOrder.objects.select_related("order").prefetch_related(
+            "lines__order_line", "lines__store_product__variant__product__category"
+        )
+
+    @extend_schema(
+        operation_id="stores_marketplace_orders_accept",
+        request=AcceptSerializer,
+        responses={200: StoreOrderSerializer},
+        description="Takes the goods out of stock. Lines of products with serial numbers "
+        "need `serials` (one per unit). Errors: `store_order_not_pending`, `order_cancelled`, "
+        "`insufficient_stock`, `serial_not_in_stock` (409); `serials_required` (400).",
+    )
+    @action(detail=True, methods=["post"])
+    def accept(self, request, store_id=None, pk=None):
+        serializer = AcceptSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serials = {
+            line["id"]: line["serials"] for line in serializer.validated_data.get("lines", [])
+        }
+        store_order = services.accept(request, self.get_object(), serials)
+        return Response(StoreOrderSerializer(self.get_queryset().get(pk=store_order.pk)).data)
+
+    @extend_schema(
+        operation_id="stores_marketplace_orders_reject",
+        request=ReasonSerializer,
+        responses={200: StoreOrderSerializer},
+        description="Cancels the whole customer order. Errors: `store_order_not_pending` (409).",
+    )
+    @action(detail=True, methods=["post"])
+    def reject(self, request, store_id=None, pk=None):
+        serializer = ReasonSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        store_order = services.reject(
+            request, self.get_object(), serializer.validated_data["reason"]
+        )
+        return Response(StoreOrderSerializer(self.get_queryset().get(pk=store_order.pk)).data)
+
+    @extend_schema(
+        operation_id="stores_marketplace_orders_ready",
+        request=None,
+        responses={200: StoreOrderSerializer},
+        description="Packed, waiting for Mahali. Errors: `store_order_not_accepted` (409).",
+    )
+    @action(detail=True, methods=["post"])
+    def ready(self, request, store_id=None, pk=None):
+        store_order = services.mark_ready(request, self.get_object())
+        return Response(StoreOrderSerializer(self.get_queryset().get(pk=store_order.pk)).data)
+
+
+# ---------------------------------------------------------------- console
+
+
+@extend_schema(tags=["console: marketplace"])
+class ConsoleOrderViewSet(ConsoleMixin, MarketplaceReadMixin, viewsets.ReadOnlyModelViewSet):
+    """Every marketplace order with the stores serving it (where to pick up)."""
+
+    serializer_class = ConsoleOrderSerializer
+    console_permissions = {"GET": "marketplace.view", "*": "marketplace.manage"}
+    filterset_fields = ["status"]
+    search_fields = ["number", "customer__email", "delivery_phone", "delivery_name"]
+
+    def get_queryset(self):
+        return Order.objects.select_related("customer").prefetch_related(
+            "lines",
+            "store_orders__store",
+            "store_orders__lines__order_line",
+            "store_orders__lines__store_product__variant__product__category",
+        )
+
+    def _respond(self, order):
+        return Response(ConsoleOrderSerializer(self.get_queryset().get(pk=order.pk)).data)
+
+    @extend_schema(
+        operation_id="console_marketplace_orders_deliver",
+        request=None,
+        responses={200: ConsoleOrderSerializer},
+        description="Every store part was picked up and the customer got the order. "
+        "Errors: `order_not_ready` (409).",
+    )
+    @action(detail=True, methods=["post"])
+    def deliver(self, request, pk=None):
+        order = services.deliver(self.get_object(), request.user)
+        return self._respond(order)
+
+    @extend_schema(
+        operation_id="console_marketplace_orders_cancel",
+        request=ReasonSerializer,
+        responses={200: ConsoleOrderSerializer},
+        description="Puts back in stock what stores had taken out. "
+        "Errors: `order_not_cancellable` (409).",
+    )
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        serializer = ReasonSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        order = services.cancel_order(
+            self.get_object(), reason=serializer.validated_data["reason"], actor=request.user
+        )
+        return self._respond(order)

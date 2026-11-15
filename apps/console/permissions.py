@@ -16,6 +16,8 @@ CONSOLE_PERMISSIONS = {
     "team.manage": {R.SUPER_ADMIN},
     "audit.view": {R.SUPER_ADMIN},
     "settings.manage": {R.SUPER_ADMIN},
+    "marketplace.view": {R.SUPER_ADMIN, R.OPERATIONS, R.SUPPORT, R.FINANCE},
+    "marketplace.manage": {R.SUPER_ADMIN, R.OPERATIONS},
 }
 
 

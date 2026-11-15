@@ -49,6 +49,16 @@ class MerchantJWTAuthentication(_RealmJWTAuthentication):
             raise AuthenticationFailed("Email not verified.", code="email_not_verified")
 
 
+class CustomerJWTAuthentication(_RealmJWTAuthentication):
+    """Marketplace shoppers. Same `User` table, separate sessions and tokens."""
+
+    realm = UserSession.Realm.CUSTOMER
+
+    def check_user(self, user):
+        if not user.is_email_verified:
+            raise AuthenticationFailed("Email not verified.", code="email_not_verified")
+
+
 class ConsoleJWTAuthentication(_RealmJWTAuthentication):
     realm = UserSession.Realm.CONSOLE
 

@@ -1,5 +1,8 @@
+from decimal import Decimal
+
 import pghistory
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from apps.core.models import BaseModel
@@ -42,6 +45,13 @@ class PlatformSettings(models.Model):
         max_length=280, blank=True, help_text="Banner shown to every merchant"
     )
     signups_open = models.BooleanField(default=True)
+    marketplace_margin_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal(10),
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Added to the cheapest store price on the marketplace",
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     @classmethod

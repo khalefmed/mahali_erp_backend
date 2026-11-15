@@ -192,7 +192,13 @@ class StaffUpdateSerializer(serializers.ModelSerializer):
 class PlatformSettingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = PlatformSettings
-        fields = ["review_sla_hours", "announcement", "signups_open", "updated_at"]
+        fields = [
+            "review_sla_hours",
+            "announcement",
+            "signups_open",
+            "marketplace_margin_percent",
+            "updated_at",
+        ]
         read_only_fields = ["updated_at"]
 
 

@@ -84,6 +84,32 @@ info:
       Unpaid remainder becomes a credit (needs a customer). Corrections: `POST credit-notes`.
     - **Dashboard / reports:** `GET /stores/{id}/reports/summary?date_from=&date_to=`.
 
+    ## Marketplace
+
+    One shop window for every store, sold under the Mahali brand: **stores are never shown**.
+    A product's price is the cheapest store that has it in stock **plus the Mahali margin**
+    (one percentage, set in `console/settings` → `marketplace_margin_percent`), rounded up to
+    the MRU. Payment on delivery.
+
+    - **Browse (no login):** `GET marketplace/categories` (with `product_count` in stock),
+      `GET marketplace/products?search=&trade=&category=<slug>&brand=<slug>&min_price=&max_price=&ordering=price|-price|-created_at`,
+      `GET marketplace/products/{id}` (variants with `price`, `available`, `max_quantity`).
+    - **Cart:** kept by the app. `POST marketplace/cart/quote {lines: [{variant, quantity}]}`
+      prices it and flags unavailable lines.
+    - **Shopper account:** `marketplace/auth/register` → `marketplace/auth/verify-email` (or
+      `marketplace/auth/login`) → customer tokens (`auth/refresh` to rotate,
+      `marketplace/auth/logout`). Merchant and customer tokens are not interchangeable.
+    - **Order:** `POST marketplace/orders {lines, delivery_name, delivery_phone, delivery_city,
+      delivery_address, note?}`. Prices are fixed at that moment. Status: `pending` (stores
+      confirming) → `confirmed` → `ready` → `delivered`, or `cancelled` (shopper while
+      pending/confirmed, a store rejecting its part, or Mahali).
+    - **Store side (ERP):** `GET stores/{id}/marketplace-orders` — the store's part at its
+      own prices, no customer data. `accept` (takes stock out; `serials` for products that
+      track them), `reject {reason}` (cancels the whole order), `ready`. Permission
+      `marketplace.orders` (owner, manager, stock keeper).
+    - **Console:** `GET console/marketplace/orders` (with the stores to collect from),
+      `deliver`, `cancel {reason}` (stock goes back to the stores).
+
     ## Environments
 
     | | URL |
@@ -2243,6 +2269,296 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
           description: Too many requests
+  /api/v1/console/marketplace/orders:
+    get:
+      operationId: console_marketplace_orders_list
+      description: Every marketplace order with the stores serving it (where to pick
+        up).
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Quel champ utiliser pour classer les résultats.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Un numéro de page de l'ensemble des résultats.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Nombre de résultats à retourner par page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: Un terme de recherche.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - cancelled
+          - confirmed
+          - delivered
+          - pending
+          - ready
+        description: |-
+          * `pending` - En attente des boutiques
+          * `confirmed` - Confirmée
+          * `ready` - Prête à livrer
+          * `delivered` - Livrée
+          * `cancelled` - Annulée
+      tags:
+      - 'console: marketplace'
+      security:
+      - consoleJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedConsoleOrderList'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/console/marketplace/orders/{id}:
+    get:
+      operationId: console_marketplace_orders_retrieve
+      description: Every marketplace order with the stores serving it (where to pick
+        up).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) order.
+        required: true
+      tags:
+      - 'console: marketplace'
+      security:
+      - consoleJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsoleOrder'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/console/marketplace/orders/{id}/cancel:
+    post:
+      operationId: console_marketplace_orders_cancel
+      description: 'Puts back in stock what stores had taken out. Errors: `order_not_cancellable`
+        (409).'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) order.
+        required: true
+      tags:
+      - 'console: marketplace'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      security:
+      - consoleJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsoleOrder'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/console/marketplace/orders/{id}/deliver:
+    post:
+      operationId: console_marketplace_orders_deliver
+      description: 'Every store part was picked up and the customer got the order.
+        Errors: `order_not_ready` (409).'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) order.
+        required: true
+      tags:
+      - 'console: marketplace'
+      security:
+      - consoleJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsoleOrder'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
   /api/v1/console/me:
     get:
       operationId: console_me
@@ -3701,6 +4017,945 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MyStore'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/marketplace/auth/login:
+    post:
+      operationId: marketplace_auth_login
+      description: 'Errors: `invalid_credentials` (401), `email_not_verified` (403).
+        Refresh with the shared `auth/refresh`.'
+      tags:
+      - 'marketplace: auth'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/marketplace/auth/logout:
+    post:
+      operationId: marketplace_auth_logout
+      tags:
+      - 'marketplace: auth'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh:
+                  type: string
+      security:
+      - customerJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/marketplace/auth/register:
+    post:
+      operationId: marketplace_auth_register
+      description: Same as `auth/register` for shoppers (works even when merchant
+        sign-ups are closed). Then `marketplace/auth/verify-email`.
+      tags:
+      - 'marketplace: auth'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '202':
+          description: No response body
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/marketplace/auth/verify-email:
+    post:
+      operationId: marketplace_auth_verify_email
+      description: 'Errors: `invalid_code` (with `attempts_left`), `code_expired`.
+        Signs the shopper in (customer tokens).'
+      tags:
+      - 'marketplace: auth'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/marketplace/cart/quote:
+    post:
+      operationId: marketplace_cart_quote
+      description: 'Prices a cart kept by the app (no login needed). Unavailable lines
+        come back with `available: false` and the largest quantity one store can serve.
+        Errors: `invalid_quantity`, `whole_quantity_required`.'
+      tags:
+      - 'marketplace: shop'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CartRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CartRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quote'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/marketplace/categories:
+    get:
+      operationId: marketplace_categories_list
+      description: Active categories with how many products are in stock (hide the
+        empty ones).
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Quel champ utiliser pour classer les résultats.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: Un terme de recherche.
+        schema:
+          type: string
+      tags:
+      - 'marketplace: shop'
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ShopCategory'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/marketplace/me:
+    get:
+      operationId: marketplace_me_retrieve
+      tags:
+      - 'marketplace: auth'
+      security:
+      - customerJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+    patch:
+      operationId: marketplace_me_partial_update
+      tags:
+      - 'marketplace: auth'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+      security:
+      - customerJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/marketplace/orders:
+    get:
+      operationId: marketplace_orders_list
+      description: The shopper's own orders. Payment on delivery.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Quel champ utiliser pour classer les résultats.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Un numéro de page de l'ensemble des résultats.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Nombre de résultats à retourner par page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: Un terme de recherche.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - cancelled
+          - confirmed
+          - delivered
+          - pending
+          - ready
+        description: |-
+          * `pending` - En attente des boutiques
+          * `confirmed` - Confirmée
+          * `ready` - Prête à livrer
+          * `delivered` - Livrée
+          * `cancelled` - Annulée
+      tags:
+      - 'marketplace: orders'
+      security:
+      - customerJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOrderList'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+    post:
+      operationId: marketplace_orders_create
+      description: 'Each line goes to the cheapest store able to serve it; prices
+        are fixed now. Errors: `empty_cart`, `insufficient_stock` (409, with `field`,
+        `available`), `invalid_quantity`, `whole_quantity_required`.'
+      tags:
+      - 'marketplace: orders'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OrderCreateRequest'
+        required: true
+      security:
+      - customerJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/marketplace/orders/{id}:
+    get:
+      operationId: marketplace_orders_retrieve
+      description: The shopper's own orders. Payment on delivery.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) order.
+        required: true
+      tags:
+      - 'marketplace: orders'
+      security:
+      - customerJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/marketplace/orders/{id}/cancel:
+    post:
+      operationId: marketplace_orders_cancel
+      description: 'While `pending` or `confirmed`. Errors: `order_not_cancellable`
+        (409).'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) order.
+        required: true
+      tags:
+      - 'marketplace: orders'
+      security:
+      - customerJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/marketplace/products:
+    get:
+      operationId: marketplace_products_list
+      description: |-
+        Products in stock somewhere, priced from the cheapest store plus the Mahali margin.
+        Stores are never named.
+      parameters:
+      - in: query
+        name: brand
+        schema:
+          type: string
+        description: Brand slug
+      - in: query
+        name: category
+        schema:
+          type: string
+        description: Category slug (includes its sub-categories)
+      - in: query
+        name: max_price
+        schema:
+          type: number
+      - in: query
+        name: min_price
+        schema:
+          type: number
+      - name: ordering
+        required: false
+        in: query
+        description: Quel champ utiliser pour classer les résultats.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Un numéro de page de l'ensemble des résultats.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Nombre de résultats à retourner par page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: Un terme de recherche.
+        schema:
+          type: string
+      - in: query
+        name: trade
+        schema:
+          type: string
+          enum:
+          - electromenager
+          - pharmacie
+          - quincaillerie
+          - telephones
+        description: |-
+          * `telephones` - Téléphones & électronique
+          * `electromenager` - Électroménager
+          * `pharmacie` - Pharmacie
+          * `quincaillerie` - Quincaillerie
+      tags:
+      - 'marketplace: shop'
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedShopProductList'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/marketplace/products/{id}:
+    get:
+      operationId: marketplace_products_retrieve
+      description: 'Variants out of stock come back with `price: null, available:
+        false`.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) product.
+        required: true
+      tags:
+      - 'marketplace: shop'
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShopProductDetail'
           description: ''
         '400':
           content:
@@ -6334,6 +7589,399 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
           description: Too many requests
+  /api/v1/stores/{store_id}/marketplace-orders:
+    get:
+      operationId: stores_marketplace_orders_list
+      description: 'Marketplace orders for this store: accept (takes stock out), reject,
+        mark ready.'
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Quel champ utiliser pour classer les résultats.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Un numéro de page de l'ensemble des résultats.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Nombre de résultats à retourner par page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: Un terme de recherche.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - accepted
+          - cancelled
+          - pending
+          - picked_up
+          - ready
+          - rejected
+        description: |-
+          * `pending` - À confirmer
+          * `accepted` - Acceptée
+          * `ready` - Prête
+          * `picked_up` - Récupérée par Mahali
+          * `rejected` - Refusée
+          * `cancelled` - Annulée
+      - in: path
+        name: store_id
+        schema:
+          type: string
+          pattern: ^[0-9a-f-]{36}$
+        required: true
+      tags:
+      - 'stores: marketplace'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedStoreOrderList'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/stores/{store_id}/marketplace-orders/{id}:
+    get:
+      operationId: stores_marketplace_orders_retrieve
+      description: 'Marketplace orders for this store: accept (takes stock out), reject,
+        mark ready.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) store order.
+        required: true
+      - in: path
+        name: store_id
+        schema:
+          type: string
+          pattern: ^[0-9a-f-]{36}$
+        required: true
+      tags:
+      - 'stores: marketplace'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoreOrder'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/stores/{store_id}/marketplace-orders/{id}/accept:
+    post:
+      operationId: stores_marketplace_orders_accept
+      description: 'Takes the goods out of stock. Lines of products with serial numbers
+        need `serials` (one per unit). Errors: `store_order_not_pending`, `order_cancelled`,
+        `insufficient_stock`, `serial_not_in_stock` (409); `serials_required` (400).'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) store order.
+        required: true
+      - in: path
+        name: store_id
+        schema:
+          type: string
+          pattern: ^[0-9a-f-]{36}$
+        required: true
+      tags:
+      - 'stores: marketplace'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcceptRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AcceptRequest'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoreOrder'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/stores/{store_id}/marketplace-orders/{id}/ready:
+    post:
+      operationId: stores_marketplace_orders_ready
+      description: 'Packed, waiting for Mahali. Errors: `store_order_not_accepted`
+        (409).'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) store order.
+        required: true
+      - in: path
+        name: store_id
+        schema:
+          type: string
+          pattern: ^[0-9a-f-]{36}$
+        required: true
+      tags:
+      - 'stores: marketplace'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoreOrder'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/stores/{store_id}/marketplace-orders/{id}/reject:
+    post:
+      operationId: stores_marketplace_orders_reject
+      description: 'Cancels the whole customer order. Errors: `store_order_not_pending`
+        (409).'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) store order.
+        required: true
+      - in: path
+        name: store_id
+        schema:
+          type: string
+          pattern: ^[0-9a-f-]{36}$
+        required: true
+      tags:
+      - 'stores: marketplace'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoreOrder'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
   /api/v1/stores/{store_id}/members:
     get:
       operationId: stores_members_list
@@ -8303,6 +9951,7 @@ paths:
           type: string
           enum:
           - adjustment
+          - marketplace
           - receipt
           - return
           - sale
@@ -8311,6 +9960,7 @@ paths:
           * `sale` - Vente
           * `return` - Retour client
           * `adjustment` - Ajustement
+          * `marketplace` - Marketplace
       - name: ordering
         required: false
         in: query
@@ -8761,6 +10411,31 @@ paths:
           description: Too many requests
 components:
   schemas:
+    AcceptLineRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Store order line
+        serials:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 64
+          maxItems: 500
+      required:
+      - id
+      - serials
+    AcceptRequest:
+      type: object
+      properties:
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcceptLineRequest'
+          description: Serial numbers, for products that track them
     AdjustmentReasonEnum:
       enum:
       - inventory_count
@@ -8866,6 +10541,28 @@ components:
         trades: {}
       required:
       - name
+    CartLineRequest:
+      type: object
+      properties:
+        variant:
+          type: string
+          format: uuid
+        quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+      required:
+      - quantity
+      - variant
+    CartRequest:
+      type: object
+      properties:
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartLineRequest'
+      required:
+      - lines
     CashSession:
       type: object
       properties:
@@ -9294,6 +10991,101 @@ components:
       - kind
       - original_name
       - size
+    ConsoleOrder:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        number:
+          type: string
+          maxLength: 20
+        status:
+          $ref: '#/components/schemas/MarketplaceOrderStatusEnum'
+        subtotal:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: MRU, customer prices
+        delivery_fee:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        total:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        payment_method:
+          type: string
+          maxLength: 20
+        delivery_name:
+          type: string
+          maxLength: 120
+        delivery_phone:
+          type: string
+          maxLength: 32
+        delivery_city:
+          type: string
+          maxLength: 80
+        delivery_address:
+          type: string
+          maxLength: 255
+        note:
+          type: string
+          maxLength: 255
+        cancel_reason:
+          type: string
+          maxLength: 255
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        confirmed_at:
+          type: string
+          format: date-time
+          nullable: true
+        ready_at:
+          type: string
+          format: date-time
+          nullable: true
+        delivered_at:
+          type: string
+          format: date-time
+          nullable: true
+        cancelled_at:
+          type: string
+          format: date-time
+          nullable: true
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderLine'
+        customer:
+          $ref: '#/components/schemas/User'
+        margin_percent:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        store_orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsoleStoreOrder'
+      required:
+      - created_at
+      - customer
+      - delivery_address
+      - delivery_city
+      - delivery_name
+      - delivery_phone
+      - id
+      - lines
+      - margin_percent
+      - number
+      - status
+      - store_orders
+      - subtotal
+      - total
     ConsoleStore:
       type: object
       properties:
@@ -9389,6 +11181,83 @@ components:
       - submitted_at
       - trade
       - waiting_hours
+    ConsoleStoreOrder:
+      type: object
+      description: 'What a store sees: its part, at its prices. Never the customer.'
+      properties:
+        store:
+          allOf:
+          - $ref: '#/components/schemas/ConsoleStoreRef'
+          readOnly: true
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        number:
+          type: string
+        status:
+          $ref: '#/components/schemas/StoreOrderStatusEnum'
+        total:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: MRU, store prices
+        reject_reason:
+          type: string
+          maxLength: 255
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        accepted_at:
+          type: string
+          format: date-time
+          nullable: true
+        ready_at:
+          type: string
+          format: date-time
+          nullable: true
+        picked_up_at:
+          type: string
+          format: date-time
+          nullable: true
+        closed_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Rejected or cancelled
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/StoreOrderLine'
+      required:
+      - created_at
+      - id
+      - lines
+      - number
+      - status
+      - store
+      - total
+    ConsoleStoreRef:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        city:
+          type: string
+        address:
+          type: string
+        phone:
+          type: string
+      required:
+      - address
+      - city
+      - id
+      - name
+      - phone
     Credit:
       type: object
       properties:
@@ -9954,6 +11823,20 @@ components:
       required:
       - email
       - password
+    MarketplaceOrderStatusEnum:
+      enum:
+      - pending
+      - confirmed
+      - ready
+      - delivered
+      - cancelled
+      type: string
+      description: |-
+        * `pending` - En attente des boutiques
+        * `confirmed` - Confirmée
+        * `ready` - Prête à livrer
+        * `delivered` - Livrée
+        * `cancelled` - Annulée
     MemberRow:
       type: object
       properties:
@@ -10041,12 +11924,14 @@ components:
       - sale
       - return
       - adjustment
+      - marketplace
       type: string
       description: |-
         * `receipt` - Réception
         * `sale` - Vente
         * `return` - Retour client
         * `adjustment` - Ajustement
+        * `marketplace` - Marketplace
     MyInvitation:
       type: object
       properties:
@@ -10122,6 +12007,154 @@ components:
       - documents
       - missing_documents
       - store
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        number:
+          type: string
+          maxLength: 20
+        status:
+          $ref: '#/components/schemas/MarketplaceOrderStatusEnum'
+        subtotal:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: MRU, customer prices
+        delivery_fee:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        total:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        payment_method:
+          type: string
+          maxLength: 20
+        delivery_name:
+          type: string
+          maxLength: 120
+        delivery_phone:
+          type: string
+          maxLength: 32
+        delivery_city:
+          type: string
+          maxLength: 80
+        delivery_address:
+          type: string
+          maxLength: 255
+        note:
+          type: string
+          maxLength: 255
+        cancel_reason:
+          type: string
+          maxLength: 255
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        confirmed_at:
+          type: string
+          format: date-time
+          nullable: true
+        ready_at:
+          type: string
+          format: date-time
+          nullable: true
+        delivered_at:
+          type: string
+          format: date-time
+          nullable: true
+        cancelled_at:
+          type: string
+          format: date-time
+          nullable: true
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderLine'
+      required:
+      - created_at
+      - delivery_address
+      - delivery_city
+      - delivery_name
+      - delivery_phone
+      - id
+      - lines
+      - number
+      - status
+      - subtotal
+      - total
+    OrderCreateRequest:
+      type: object
+      properties:
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartLineRequest'
+        delivery_name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        delivery_phone:
+          type: string
+          minLength: 1
+          maxLength: 32
+        delivery_city:
+          type: string
+          minLength: 1
+          maxLength: 80
+        delivery_address:
+          type: string
+          minLength: 1
+          maxLength: 255
+        note:
+          type: string
+          default: ''
+          maxLength: 255
+      required:
+      - delivery_address
+      - delivery_city
+      - delivery_name
+      - delivery_phone
+      - lines
+    OrderLine:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        variant:
+          type: string
+          format: uuid
+        description:
+          type: string
+          maxLength: 255
+        quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+        unit_price:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: MRU, customer price
+        line_total:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+      required:
+      - description
+      - id
+      - line_total
+      - quantity
+      - unit_price
+      - variant
     Owner:
       type: object
       properties:
@@ -10265,6 +12298,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CatalogProduct'
+    PaginatedConsoleOrderList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsoleOrder'
     PaginatedConsoleStoreList:
       type: object
       required:
@@ -10380,6 +12436,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Expense'
+    PaginatedOrderList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
     PaginatedProductRequestList:
       type: object
       required:
@@ -10472,6 +12551,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SerialUnit'
+    PaginatedShopProductList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShopProduct'
     PaginatedStockAdjustmentList:
       type: object
       required:
@@ -10518,6 +12620,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/StockMovement'
+    PaginatedStoreOrderList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/StoreOrder'
     PaginatedStoreProductList:
       type: object
       required:
@@ -10713,6 +12838,11 @@ components:
           maxLength: 280
         signups_open:
           type: boolean
+        marketplace_margin_percent:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          description: Added to the cheapest store price on the marketplace
     PatchedStaffUpdateRequest:
       type: object
       properties:
@@ -10936,6 +13066,11 @@ components:
           maxLength: 280
         signups_open:
           type: boolean
+        marketplace_margin_percent:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          description: Added to the cheapest store price on the marketplace
         updated_at:
           type: string
           format: date-time
@@ -11084,6 +13219,60 @@ components:
       description: |-
         * `active` - Active
         * `archived` - Archived
+    Quote:
+      type: object
+      properties:
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuoteLine'
+        total:
+          type: integer
+          description: MRU, available lines only
+      required:
+      - lines
+      - total
+    QuoteLine:
+      type: object
+      properties:
+        variant:
+          type: string
+          format: uuid
+        description:
+          type: string
+        quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+        available:
+          type: boolean
+        max_quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+        unit_price:
+          type: integer
+          nullable: true
+        line_total:
+          type: integer
+          nullable: true
+      required:
+      - available
+      - description
+      - line_total
+      - max_quantity
+      - quantity
+      - unit_price
+      - variant
+    ReasonRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 255
+      required:
+      - reason
     Receipt:
       type: object
       properties:
@@ -11637,6 +13826,202 @@ components:
       - sales_count
       - sales_total
       - vat_total
+    ShopBrand:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 80
+        slug:
+          type: string
+          maxLength: 100
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - id
+      - name
+      - slug
+    ShopCategory:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        trade:
+          $ref: '#/components/schemas/TradeEnum'
+        parent:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+          maxLength: 100
+        name_ar:
+          type: string
+          maxLength: 100
+        slug:
+          type: string
+          maxLength: 120
+          pattern: ^[-a-zA-Z0-9_]+$
+        product_count:
+          type: integer
+          readOnly: true
+          description: Products in stock
+      required:
+      - id
+      - name
+      - product_count
+      - slug
+      - trade
+    ShopCategoryRef:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        trade:
+          $ref: '#/components/schemas/TradeEnum'
+        name:
+          type: string
+          maxLength: 100
+        name_ar:
+          type: string
+          maxLength: 100
+        slug:
+          type: string
+          maxLength: 120
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - id
+      - name
+      - slug
+      - trade
+    ShopProduct:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 160
+        name_ar:
+          type: string
+          maxLength: 160
+        brand:
+          allOf:
+          - $ref: '#/components/schemas/ShopBrand'
+          nullable: true
+        category:
+          $ref: '#/components/schemas/ShopCategoryRef'
+        image_url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
+        price:
+          type: integer
+          description: MRU, lowest price of the product (from …)
+      required:
+      - brand
+      - category
+      - id
+      - name
+      - price
+    ShopProductDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 160
+        name_ar:
+          type: string
+          maxLength: 160
+        brand:
+          allOf:
+          - $ref: '#/components/schemas/ShopBrand'
+          nullable: true
+        category:
+          $ref: '#/components/schemas/ShopCategoryRef'
+        image_url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
+        price:
+          type: integer
+          description: MRU, lowest price of the product (from …)
+        description:
+          type: string
+        attributes: {}
+        attribute_schema: {}
+        tracks_serial:
+          type: boolean
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShopVariant'
+          readOnly: true
+      required:
+      - attribute_schema
+      - brand
+      - category
+      - id
+      - name
+      - price
+      - tracks_serial
+      - variants
+    ShopVariant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 120
+        full_name:
+          type: string
+          readOnly: true
+        attributes: {}
+        price:
+          type: integer
+          nullable: true
+          description: MRU; null when out of stock
+        available:
+          type: boolean
+          readOnly: true
+        max_quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+          nullable: true
+          description: Most you can order
+        warranty_months:
+          type: integer
+          nullable: true
+      required:
+      - available
+      - full_name
+      - id
+      - max_quantity
+      - price
+      - warranty_months
     Staff:
       type: object
       properties:
@@ -12081,6 +14466,111 @@ components:
           minLength: 1
       required:
       - body
+    StoreOrder:
+      type: object
+      description: 'What a store sees: its part, at its prices. Never the customer.'
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        number:
+          type: string
+        status:
+          $ref: '#/components/schemas/StoreOrderStatusEnum'
+        total:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: MRU, store prices
+        reject_reason:
+          type: string
+          maxLength: 255
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        accepted_at:
+          type: string
+          format: date-time
+          nullable: true
+        ready_at:
+          type: string
+          format: date-time
+          nullable: true
+        picked_up_at:
+          type: string
+          format: date-time
+          nullable: true
+        closed_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Rejected or cancelled
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/StoreOrderLine'
+      required:
+      - created_at
+      - id
+      - lines
+      - number
+      - status
+      - total
+    StoreOrderLine:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        store_product:
+          type: string
+          format: uuid
+        description:
+          type: string
+        quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,9}(?:\.\d{0,3})?$
+        unit_price:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: MRU, store price
+        line_total:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        tracks_serial:
+          type: boolean
+        serials:
+          description: Set when accepted
+      required:
+      - description
+      - id
+      - line_total
+      - quantity
+      - store_product
+      - tracks_serial
+      - unit_price
+    StoreOrderStatusEnum:
+      enum:
+      - pending
+      - accepted
+      - ready
+      - picked_up
+      - rejected
+      - cancelled
+      type: string
+      description: |-
+        * `pending` - À confirmer
+        * `accepted` - Acceptée
+        * `ready` - Prête
+        * `picked_up` - Récupérée par Mahali
+        * `rejected` - Refusée
+        * `cancelled` - Annulée
     StoreProduct:
       type: object
       description: '`avg_cost` and `stock_value` are null for roles without costs.view.'
@@ -12461,6 +14951,11 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: Console (Mahali team) token from console/auth/login
+    customerJwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Marketplace shopper token from marketplace/auth/login
     jwtAuth:
       type: http
       scheme: bearer

@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "apps.inventory",
     "apps.sales",
     "apps.reports",
+    "apps.marketplace",
 ]
 
 MIDDLEWARE = [
@@ -178,6 +179,8 @@ SPECTACULAR_SETTINGS = {
         "DocumentKindEnum": "apps.stores.models.DocumentKind",
         "TradeEnum": "apps.stores.models.Trade",
         "ProductRequestStatusEnum": "apps.catalog.models.ProductRequestStatus",
+        "MarketplaceOrderStatusEnum": "apps.marketplace.models.OrderStatus",
+        "StoreOrderStatusEnum": "apps.marketplace.models.StoreOrderStatus",
         "SaleStatusEnum": "apps.sales.models.Sale.Status",
         "CashSessionStatusEnum": "apps.sales.models.CashSession.Status",
         "CreditStatusEnum": "apps.sales.models.Credit.Status",

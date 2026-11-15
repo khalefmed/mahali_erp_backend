@@ -1,0 +1,6 @@
+{% autoescape off %}Bonjour {{ user.full_name }},
+
+Votre commande {{ order.number }} a été annulée{% if order.cancel_reason == "rejected_by_store" %} : un article n'est finalement plus disponible{% endif %}. Vous n'avez rien à payer.
+
+L'équipe Mahali
+{% endautoescape %}

@@ -86,6 +86,7 @@ class UserSession(models.Model):
     class Realm(models.TextChoices):
         MERCHANT = "merchant"
         CONSOLE = "console"
+        CUSTOMER = "customer"  # marketplace shoppers
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sessions")

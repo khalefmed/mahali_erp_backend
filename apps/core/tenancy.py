@@ -44,3 +44,29 @@ def store_context(store_id):
                 activate_store(previous)
             else:
                 deactivate_store()
+
+
+def enable_marketplace_read() -> None:
+    """Let this transaction READ the rows the marketplace needs across stores (offers,
+    marketplace orders). Writes stay limited to the activated store: the extra policy
+    (`apps.core.rls.AllowMarketplaceRead`) is FOR SELECT only. Lives until the end of the
+    current transaction, like `activate_store`."""
+    if not connection.in_atomic_block:
+        raise RuntimeError("enable_marketplace_read() must run inside a transaction")
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT set_config('app.marketplace_read', 'on', true)")
+
+
+@contextmanager
+def marketplace_read():
+    """Cross-store reads for one block (services, commands, tests)."""
+    with transaction.atomic():
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT current_setting('app.marketplace_read', true)")
+            previous = cursor.fetchone()[0] or ""
+        enable_marketplace_read()
+        try:
+            yield
+        finally:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT set_config('app.marketplace_read', %s, true)", [previous])

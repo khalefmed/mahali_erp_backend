@@ -1,0 +1,2 @@
+{% autoescape off %}Commande marketplace {{ order.number }} annulée
+{% endautoescape %}
