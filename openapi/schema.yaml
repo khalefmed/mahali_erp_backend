@@ -5207,6 +5207,51 @@ paths:
       operationId: marketplace_products_facets
       description: 'Filters for a listing: same query as the list (`trade`, `category`,
         `search`, prices). Brands ignore the `brand` filter so the shopper can switch.'
+      parameters:
+      - in: query
+        name: brand
+        schema:
+          type: string
+        description: Brand slug
+      - in: query
+        name: category
+        schema:
+          type: string
+        description: Category slug (includes its sub-categories)
+      - in: query
+        name: max_price
+        schema:
+          type: number
+      - in: query
+        name: min_price
+        schema:
+          type: number
+      - name: ordering
+        required: false
+        in: query
+        description: Quel champ utiliser pour classer les résultats.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: Un terme de recherche.
+        schema:
+          type: string
+      - in: query
+        name: trade
+        schema:
+          type: string
+          enum:
+          - electromenager
+          - pharmacie
+          - quincaillerie
+          - telephones
+        description: |-
+          * `telephones` - Téléphones & électronique
+          * `electromenager` - Électroménager
+          * `pharmacie` - Pharmacie
+          * `quincaillerie` - Quincaillerie
       tags:
       - 'marketplace: shop'
       security:

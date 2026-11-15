@@ -129,6 +129,7 @@ class ShopProductViewSet(PublicMixin, MarketplaceReadMixin, viewsets.ReadOnlyMod
 
     @extend_schema(
         operation_id="marketplace_products_facets",
+        filters=True,
         responses={200: ShopFacetsSerializer},
         description="Filters for a listing: same query as the list (`trade`, `category`, "
         "`search`, prices). Brands ignore the `brand` filter so the shopper can switch.",
