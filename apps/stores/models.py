@@ -3,7 +3,7 @@ from django.conf import settings
 from django.db import models
 from django.db.models import Q
 
-from apps.core.models import BaseModel
+from apps.core.models import BaseModel, StoreScopedModel
 
 from .roles import Role
 
@@ -134,3 +134,49 @@ class OwnershipTransfer(BaseModel):
     )
     accepted_at = models.DateTimeField(null=True, blank=True)
     cancelled_at = models.DateTimeField(null=True, blank=True)
+
+
+class StoreSettings(StoreScopedModel):
+    """The owner's preferences for one store, one row (created on first read)."""
+
+    # Payment methods offered at the till.
+    accept_cash = models.BooleanField(default=True)
+    accept_mobile_money = models.BooleanField(default=True)
+    accept_bank_transfer = models.BooleanField(default=True)
+    accept_customer_credit = models.BooleanField(default=True)
+    # Credit policy.
+    credit_block_after_days = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text="Block credit sales when the customer is this late"
+    )
+    credit_guarantor_above = models.PositiveIntegerField(
+        null=True, blank=True, help_text="MRU, a guarantor is required above"
+    )
+    credit_deposit_deducted = models.BooleanField(default=True)
+    # Payment reminders.
+    remind_before_due = models.BooleanField(default=True)
+    remind_before_due_days = models.PositiveSmallIntegerField(default=3)
+    remind_overdue_weekly = models.BooleanField(default=True)
+    # Set-up wizard.
+    setup_blank = models.BooleanField(default=False)
+    setup_completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["store"], name="one_settings_per_store")]
+
+
+class RolePolicy(StoreScopedModel):
+    """Limits one role works within in this store. Missing row: the defaults of
+    `apps.stores.services.role_policy_defaults`."""
+
+    role = models.CharField(max_length=20, choices=Role.choices)
+    max_discount_percent = models.PositiveSmallIntegerField(null=True, blank=True)
+    credit_limit = models.PositiveIntegerField(null=True, blank=True, help_text="MRU")
+    void_window_minutes = models.PositiveSmallIntegerField(null=True, blank=True)
+    cash_tolerance = models.PositiveIntegerField(null=True, blank=True, help_text="MRU")
+    see_other_stores_stock = models.BooleanField(default=False)
+    see_daily_takings = models.BooleanField(default=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["store", "role"], name="one_policy_per_role")
+        ]

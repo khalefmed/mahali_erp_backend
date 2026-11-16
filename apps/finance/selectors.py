@@ -4,8 +4,9 @@ posts one journal entry, SYSCOHADA accounts. Runs under the store's RLS context.
 
 from datetime import date, timedelta
 
-from django.db.models import Sum
+from django.db.models import Count, Sum
 from django.db.models.functions import Coalesce
+from django.utils import timezone
 
 from apps.inventory.models import Receipt
 from apps.sales.models import (
@@ -18,7 +19,7 @@ from apps.sales.models import (
     Sale,
 )
 
-from .models import SupplierPayment
+from .models import MoneyTransfer, SupplierPayment
 
 CUSTOMERS = ("411", "Clients")
 SUPPLIERS = ("401", "Fournisseurs")
@@ -158,6 +159,13 @@ def journal(day: date) -> dict:
             )
         )
 
+    for transfer in MoneyTransfer.objects.filter(date=day):
+        lines = [
+            _line(_method_account(transfer.to_account), transfer.note, debit=transfer.amount),
+            _line(_method_account(transfer.from_account), transfer.note, credit=transfer.amount),
+        ]
+        entries.append((transfer.created_at, f"transfer-{transfer.id}", "misc", "", lines))
+
     entries.sort(key=lambda entry: entry[0])
     return {
         "date": day,
@@ -218,3 +226,146 @@ def supplier_payables() -> int:
     )["t"]
     paid = SupplierPayment.objects.aggregate(t=Coalesce(Sum("amount"), 0))["t"]
     return int(received) - int(paid)
+
+
+# ---------------------------------------------------------------- treasury
+
+ACCOUNT_NAMES = {
+    PaymentMethod.CASH: "Caisse",
+    PaymentMethod.BANKILY: "Bankily",
+    PaymentMethod.MASRVI: "Masrvi",
+    PaymentMethod.SEDAD: "Sedad",
+    PaymentMethod.BANK_TRANSFER: "Banque",
+}
+ACCOUNT_KINDS = {
+    PaymentMethod.CASH: "cash",
+    PaymentMethod.BANKILY: "mobile_money",
+    PaymentMethod.MASRVI: "mobile_money",
+    PaymentMethod.SEDAD: "mobile_money",
+    PaymentMethod.BANK_TRANSFER: "bank",
+}
+
+
+def _by_method(queryset, field="amount") -> dict:
+    return {
+        row["method"]: int(row["t"])
+        for row in queryset.values("method").annotate(t=Coalesce(Sum(field), 0))
+    }
+
+
+def money_accounts() -> list[dict]:
+    """One account per payment method; the balance is every recorded flow on it."""
+    payments = _by_method(Payment.objects.all())
+    expenses = _by_method(Expense.objects.all())
+    supplier = _by_method(SupplierPayment.objects.all())
+    transfers_in = {
+        row["to_account"]: int(row["t"])
+        for row in MoneyTransfer.objects.values("to_account").annotate(t=Sum("amount"))
+    }
+    transfers_out = {
+        row["from_account"]: int(row["t"])
+        for row in MoneyTransfer.objects.values("from_account").annotate(t=Sum("amount"))
+    }
+    today = Payment.objects.filter(created_at__date=timezone.localdate(), amount__gt=0)
+    operations_today = {
+        row["method"]: row["n"] for row in today.values("method").annotate(n=Count("id"))
+    }
+    till = CashSession.objects.filter(status=CashSession.Status.OPEN).select_related("opened_by")
+    till = till.order_by("-created_at").first()
+    return [
+        {
+            "id": method,
+            "name": ACCOUNT_NAMES[method],
+            "kind": ACCOUNT_KINDS[method],
+            "method": method,
+            "balance": payments.get(method, 0)
+            - expenses.get(method, 0)
+            - supplier.get(method, 0)
+            + transfers_in.get(method, 0)
+            - transfers_out.get(method, 0),
+            "operations_today": operations_today.get(method, 0),
+            "opened_by_name": till.opened_by.full_name
+            if till and method == PaymentMethod.CASH
+            else None,
+            "is_store_till": method == PaymentMethod.CASH,
+            "reconciled_on": None,
+        }
+        for method in PaymentMethod.values
+    ]
+
+
+def money_movements(day: date) -> list[dict]:
+    """Every flow of one day on the shop's accounts, newest first."""
+    on_day = {"created_at__date": day}
+    rows = []
+    payments = Payment.objects.filter(**on_day).select_related(
+        "sale__customer", "credit__customer", "credit__sale", "credit_note"
+    )
+    for payment in payments:
+        customer = (payment.credit and payment.credit.customer) or (
+            payment.sale and payment.sale.customer
+        )
+        sale = payment.sale or (payment.credit and payment.credit.sale)
+        rows.append(
+            {
+                "id": f"payment-{payment.id}",
+                "at": payment.created_at,
+                "account_id": payment.method,
+                "kind": payment.kind,
+                "reference": (sale and sale.number)
+                or (payment.credit_note and payment.credit_note.number)
+                or "",
+                "party": customer.name if customer else "",
+                "detail": payment.reference,
+                "amount": payment.amount,
+                "counterpart_id": None,
+            }
+        )
+    for expense in Expense.objects.filter(**on_day):
+        rows.append(
+            {
+                "id": f"expense-{expense.id}",
+                "at": expense.created_at,
+                "account_id": expense.method,
+                "kind": "expense",
+                "reference": "",
+                "party": "",
+                "detail": expense.note or ExpenseCategory(expense.category).label,
+                "amount": -expense.amount,
+                "counterpart_id": None,
+            }
+        )
+    for paid in SupplierPayment.objects.filter(**on_day).select_related("supplier"):
+        rows.append(
+            {
+                "id": f"supplierpayment-{paid.id}",
+                "at": paid.created_at,
+                "account_id": paid.method,
+                "kind": "supplier_payment",
+                "reference": paid.reference,
+                "party": paid.supplier.name,
+                "detail": paid.note,
+                "amount": -paid.amount,
+                "counterpart_id": None,
+            }
+        )
+    for transfer in MoneyTransfer.objects.filter(date=day):
+        for account, other, sign in (
+            (transfer.from_account, transfer.to_account, -1),
+            (transfer.to_account, transfer.from_account, 1),
+        ):
+            rows.append(
+                {
+                    "id": f"transfer-{transfer.id}-{'in' if sign > 0 else 'out'}",
+                    "at": transfer.created_at,
+                    "account_id": account,
+                    "kind": "transfer",
+                    "reference": "",
+                    "party": "",
+                    "detail": transfer.note,
+                    "amount": sign * transfer.amount,
+                    "counterpart_id": other,
+                }
+            )
+    rows.sort(key=lambda row: row["at"], reverse=True)
+    return rows

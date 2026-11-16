@@ -19,6 +19,7 @@ from .files import unsign
 from .models import Invitation, Membership, OwnershipTransfer, Store, StoreDocument
 from .roles import ROLE_PERMISSIONS, Perm
 from .serializers import (
+    CreditPolicySerializer,
     InvitationPreviewSerializer,
     InvitationSerializer,
     MembershipSerializer,
@@ -26,9 +27,15 @@ from .serializers import (
     MyStoreSerializer,
     OnboardingStatusSerializer,
     OwnershipTransferSerializer,
+    PaymentSettingsSerializer,
+    ReminderSettingsSerializer,
+    RolePolicyListSerializer,
+    RolePolicySerializer,
     StoreCreateSerializer,
     StoreDocumentSerializer,
     StoreSerializer,
+    StoreSetupPatchSerializer,
+    StoreSetupSerializer,
     my_store_payload,
 )
 
@@ -355,3 +362,158 @@ class PrivateFileView(APIView):
         response["Cache-Control"] = "private, no-store"
         response["X-Content-Type-Options"] = "nosniff"
         return response
+
+
+# ---------------------------------------------------------------- store preferences
+
+
+class _SettingsView(StoreScopedViewMixin, APIView):
+    """GET the store's preferences, PATCH some of them (owner)."""
+
+    required_permissions = {"GET": Perm.STORE_VIEW, "PATCH": Perm.STORE_MANAGE}
+    serializer_class: type
+
+    def get(self, request, store_id):
+        return Response(self.serializer_class(services.store_settings(request.store)).data)
+
+    def patch(self, request, store_id):
+        serializer = self.serializer_class(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        row = services.update_settings(request.store, **serializer.validated_data)
+        return Response(self.serializer_class(row).data)
+
+
+@extend_schema(
+    tags=["stores: settings"],
+    description="Payment methods offered at the till (cash, mobile money, bank, credit).",
+)
+class PaymentSettingsView(_SettingsView):
+    serializer_class = PaymentSettingsSerializer
+
+    @extend_schema(
+        operation_id="stores_payment_settings_retrieve", responses={200: PaymentSettingsSerializer}
+    )
+    def get(self, request, store_id):
+        return super().get(request, store_id)
+
+    @extend_schema(
+        operation_id="stores_payment_settings_update",
+        request=PaymentSettingsSerializer,
+        responses={200: PaymentSettingsSerializer},
+    )
+    def patch(self, request, store_id):
+        return super().patch(request, store_id)
+
+
+@extend_schema(
+    tags=["stores: settings"],
+    description="Credit rules at the till: block after N days late, guarantor above.",
+)
+class CreditPolicyView(_SettingsView):
+    serializer_class = CreditPolicySerializer
+
+    @extend_schema(
+        operation_id="stores_credit_policy_retrieve", responses={200: CreditPolicySerializer}
+    )
+    def get(self, request, store_id):
+        return super().get(request, store_id)
+
+    @extend_schema(
+        operation_id="stores_credit_policy_update",
+        request=CreditPolicySerializer,
+        responses={200: CreditPolicySerializer},
+    )
+    def patch(self, request, store_id):
+        return super().patch(request, store_id)
+
+
+@extend_schema(
+    tags=["stores: settings"],
+    description="Automatic payment reminders. Saved only: sent once SMS is plugged in.",
+)
+class ReminderSettingsView(_SettingsView):
+    serializer_class = ReminderSettingsSerializer
+
+    @extend_schema(
+        operation_id="stores_reminder_settings_retrieve",
+        responses={200: ReminderSettingsSerializer},
+    )
+    def get(self, request, store_id):
+        return super().get(request, store_id)
+
+    @extend_schema(
+        operation_id="stores_reminder_settings_update",
+        request=ReminderSettingsSerializer,
+        responses={200: ReminderSettingsSerializer},
+    )
+    def patch(self, request, store_id):
+        return super().patch(request, store_id)
+
+
+@extend_schema(tags=["stores: settings"])
+class StoreSetupView(StoreScopedViewMixin, APIView):
+    """The set-up wizard: one trade per store for now, no optional modules yet."""
+
+    required_permissions = {"GET": Perm.STORE_VIEW, "PATCH": Perm.STORE_MANAGE}
+
+    def _data(self, store):
+        row = services.store_settings(store)
+        return StoreSetupSerializer(
+            {
+                "trades": [store.trade],
+                "modules": [],
+                "blank": row.setup_blank,
+                "completed_at": row.setup_completed_at,
+            }
+        ).data
+
+    @extend_schema(operation_id="stores_setup_retrieve", responses={200: StoreSetupSerializer})
+    def get(self, request, store_id):
+        return Response(self._data(request.store))
+
+    @extend_schema(
+        operation_id="stores_setup_update",
+        request=StoreSetupPatchSerializer,
+        responses={200: StoreSetupSerializer},
+        description="`blank: true`: no trade pack. `completed: true` ends the wizard.",
+    )
+    def patch(self, request, store_id):
+        body = StoreSetupPatchSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        fields = {}
+        if "blank" in body.validated_data:
+            fields["setup_blank"] = body.validated_data["blank"]
+        if body.validated_data.get("completed"):
+            fields["setup_completed_at"] = timezone.now()
+        services.update_settings(request.store, **fields)
+        return Response(self._data(request.store))
+
+
+@extend_schema(tags=["stores: team"])
+class RolePolicyListView(StoreScopedViewMixin, APIView):
+    required_permissions = {"GET": Perm.MEMBERS_MANAGE}
+
+    @extend_schema(
+        operation_id="stores_role_policies_list",
+        responses={200: RolePolicyListSerializer},
+        description="Limits of each role in this store (defaults until the owner changes them).",
+    )
+    def get(self, request, store_id):
+        return Response({"results": services.role_policies(request.store)})
+
+
+@extend_schema(tags=["stores: team"])
+class RolePolicyView(StoreScopedViewMixin, APIView):
+    required_permissions = {"PATCH": Perm.STORE_MANAGE}
+
+    @extend_schema(
+        operation_id="stores_role_policies_update",
+        request=RolePolicySerializer,
+        responses={200: RolePolicySerializer},
+        description="Owner only. Roles: manager, cashier, seller, stock_keeper (`invalid_role`).",
+    )
+    def patch(self, request, store_id, role):
+        body = RolePolicySerializer(data=request.data, partial=True)
+        body.is_valid(raise_exception=True)
+        policy = services.update_role_policy(request.store, role, **body.validated_data)
+        return Response(RolePolicySerializer(policy).data)

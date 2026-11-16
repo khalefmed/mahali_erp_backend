@@ -21,6 +21,12 @@ router.register(
 urlpatterns = [
     path("me/stores", views.MyStoresView.as_view()),
     path("stores/<uuid:store_id>/ownership-transfer", views.OwnershipTransferView.as_view()),
+    path("stores/<uuid:store_id>/payment-settings", views.PaymentSettingsView.as_view()),
+    path("stores/<uuid:store_id>/credit-policy", views.CreditPolicyView.as_view()),
+    path("stores/<uuid:store_id>/reminder-settings", views.ReminderSettingsView.as_view()),
+    path("stores/<uuid:store_id>/setup", views.StoreSetupView.as_view()),
+    path("stores/<uuid:store_id>/role-policies", views.RolePolicyListView.as_view()),
+    path("stores/<uuid:store_id>/role-policies/<str:role>", views.RolePolicyView.as_view()),
     path("invitations/<str:token>", views.InvitationPreviewView.as_view()),
     path("invitations/<str:token>/accept", views.InvitationAcceptView.as_view()),
     path("files/<str:token>", views.PrivateFileView.as_view(), name="private-file"),
