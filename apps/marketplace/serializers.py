@@ -5,6 +5,7 @@ from apps.catalog.models import Brand, Category, Product, Variant
 
 from . import meysara
 from .models import (
+    IdentityStatus,
     IdentityVerification,
     InstalmentMethod,
     MeysaraInstalment,
@@ -374,7 +375,17 @@ class IdentityDocumentsSerializer(serializers.Serializer):
     selfie = serializers.FileField(help_text="Selfie taken in the app (liveness check)")
 
 
+class IdentityChecksSerializer(serializers.Serializer):
+    document = serializers.CharField(required=False, help_text="passed · failed")
+    face_match = serializers.FloatField(
+        required=False, allow_null=True, help_text="0 to 1, the selfie against the ID photo"
+    )
+    liveness = serializers.CharField(required=False, help_text="passed · failed · not_run")
+
+
 class IdentitySerializer(serializers.ModelSerializer):
+    status = serializers.ChoiceField(choices=IdentityStatus.choices, read_only=True)
+    checks = IdentityChecksSerializer(read_only=True, help_text="Empty until the photos")
     nni = serializers.SerializerMethodField()
     phone = serializers.SerializerMethodField()
     simulation = serializers.SerializerMethodField()
@@ -394,6 +405,7 @@ class IdentitySerializer(serializers.ModelSerializer):
             "verified_at",
             "simulation",
         ]
+        read_only_fields = fields
 
     def get_nni(self, obj) -> str:
         """Masked: last 4 digits only"""

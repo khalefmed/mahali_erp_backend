@@ -14367,20 +14367,23 @@ components:
       type: object
       properties:
         status:
-          $ref: '#/components/schemas/IdentityStatusEnum'
+          allOf:
+          - $ref: '#/components/schemas/IdentityStatusEnum'
+          readOnly: true
         nni:
           type: string
           description: 'Masked: last 4 digits only'
           readOnly: true
         first_name:
           type: string
-          maxLength: 80
+          readOnly: true
         last_name:
           type: string
-          maxLength: 80
+          readOnly: true
         birth_date:
           type: string
           format: date
+          readOnly: true
         phone:
           type: string
           description: 'Masked: last 2 digits only'
@@ -14388,15 +14391,20 @@ components:
         phone_verified_at:
           type: string
           format: date-time
+          readOnly: true
           nullable: true
         checks:
-          description: 'Provider results: document, face_match, liveness'
+          allOf:
+          - $ref: '#/components/schemas/IdentityChecks'
+          readOnly: true
+          description: Empty until the photos
         reject_reason:
           type: string
-          maxLength: 40
+          readOnly: true
         verified_at:
           type: string
           format: date-time
+          readOnly: true
           nullable: true
         simulation:
           type: boolean
@@ -14404,11 +14412,30 @@ components:
           readOnly: true
       required:
       - birth_date
+      - checks
       - first_name
       - last_name
       - nni
       - phone
+      - phone_verified_at
+      - reject_reason
       - simulation
+      - status
+      - verified_at
+    IdentityChecks:
+      type: object
+      properties:
+        document:
+          type: string
+          description: passed · failed
+        face_match:
+          type: number
+          format: double
+          nullable: true
+          description: 0 to 1, the selfie against the ID photo
+        liveness:
+          type: string
+          description: passed · failed · not_run
     IdentityCodeRequest:
       type: object
       properties:
