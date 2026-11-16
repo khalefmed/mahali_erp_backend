@@ -74,6 +74,10 @@ def session_totals(session: CashSession) -> dict:
     sales = Sale.objects.filter(cash_session=session)
     expenses = Expense.objects.filter(cash_session=session)
     cash_expenses = total(expenses.filter(method=PaymentMethod.CASH))
+    from apps.finance.models import SupplierPayment  # finance depends on sales
+
+    supplier_payments = SupplierPayment.objects.filter(cash_session=session)
+    cash_supplier_payments = total(supplier_payments.filter(method=PaymentMethod.CASH))
     return {
         "sales_count": sales.count(),
         "sales_total": total(sales, "total"),
@@ -83,8 +87,12 @@ def session_totals(session: CashSession) -> dict:
         "credit_repayments": total(payments.filter(kind=Payment.Kind.CREDIT_REPAYMENT)),
         "refunds": -total(payments.filter(kind=Payment.Kind.REFUND)),
         "expenses": total(expenses),
+        "supplier_payments": total(supplier_payments),
         "payments_by_method": by_method,
-        "expected_cash": session.opening_float + by_method[PaymentMethod.CASH] - cash_expenses,
+        "expected_cash": session.opening_float
+        + by_method[PaymentMethod.CASH]
+        - cash_expenses
+        - cash_supplier_payments,
     }
 
 

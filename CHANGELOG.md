@@ -3,6 +3,25 @@
 Every change the web app should know about (new or changed endpoints, fields, error
 codes). Newest first. The full contract is always at `/api/schema/` on each environment.
 
+## 2026-11-16 — ERP web back-office, lot 1 (#34)
+
+Routes the web app already calls by hand (`src/features/*/schemas.ts`), same contracts:
+- `GET stores/{id}/accounting/journal?date=`: the day's entries, posted from sales, payments,
+  credit notes, expenses, receipts and supplier payments (SYSCOHADA accounts; `journal`
+  `sales` · `purchases` · `cash` · `bank`).
+- `GET stores/{id}/accounting/closing?date_from=&date_to=`: closing checklist and VAT
+  declaration (`due_date` the 15th of the next month). Purchase VAT and bank statements aren't
+  recorded yet: `vat_deductible` 0, `bank_reconciled` never done.
+- `GET|POST stores/{id}/supplier-payments` (`suppliers.manage`): `supplier`, `amount`, `method`,
+  `reference`, `note`. A cash payment needs my open till (`no_open_cash_session`) and lowers its
+  `expected_cash`; Z totals gain `supplier_payments`.
+- `GET stores/{id}/reports/details?date_from=&date_to=`: `sales_by_category` (VAT excluded),
+  `dormant_products` (60 days), `supplier_payables` (receipts minus supplier payments).
+- `GET stores/{id}/customers/{cid}/statement?date_from=&date_to=` (default this year) and
+  `GET stores/{id}/customer-advances` (always empty: no deposits or store credit yet).
+- `GET stores/{id}/member-activity` (`members.manage`) and
+  `GET stores/{id}/seller-performance/me?month=YYYY-MM` (commission 0, no target yet).
+
 ## 2026-11-16 — Catalog photos and Arabic names; public Meysara rules (#31)
 
 - `GET platform` gains `meysara_enabled`, `meysara_min_total`, `meysara_max_financed`,

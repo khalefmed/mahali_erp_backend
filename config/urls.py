@@ -15,6 +15,7 @@ api_v1 = [
     path("", include("apps.reports.urls")),
     path("", include("apps.console.urls")),
     path("", include("apps.marketplace.urls")),
+    path("", include("apps.finance.urls")),
 ]
 
 urlpatterns = [

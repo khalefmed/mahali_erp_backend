@@ -306,3 +306,49 @@ class ExpenseSerializer(serializers.ModelSerializer):
         model = Expense
         fields = ["id", "category", "amount", "method", "note", "created_by_name", "created_at"]
         read_only_fields = ["id", "created_at"]
+
+
+class StatementQuerySerializer(serializers.Serializer):
+    date_from = serializers.DateField(required=False, help_text="Default: 1 January")
+    date_to = serializers.DateField(required=False, help_text="Default: today")
+
+
+class StatementMovementSerializer(serializers.Serializer):
+    date = serializers.DateField()
+    reference = serializers.CharField(help_text="Sale number (invoice) or payment reference")
+    label = serializers.CharField()
+    kind = serializers.ChoiceField(choices=["invoice", "payment"])
+    amount = serializers.IntegerField(help_text="Always positive; kind says which way")
+    credit = serializers.UUIDField(allow_null=True)
+
+
+class StatementTermsSerializer(serializers.Serializer):
+    credit_limit = serializers.IntegerField(allow_null=True)
+    payment_days = serializers.IntegerField(allow_null=True)
+    contact_name = serializers.CharField(required=False)
+
+
+class CustomerStatementSerializer(serializers.Serializer):
+    opening_balance = serializers.IntegerField(help_text="Owed before `from`")
+    movements = StatementMovementSerializer(many=True)
+    year_invoiced = serializers.IntegerField()
+    year_paid = serializers.IntegerField()
+    average_days_to_pay = serializers.IntegerField(allow_null=True)
+    usual_payment = serializers.CharField(allow_blank=True)
+    terms = StatementTermsSerializer(allow_null=True, help_text="Not configured yet: null")
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        return {"from": instance["from"].isoformat(), "to": instance["to"].isoformat(), **data}
+
+
+class CustomerAdvanceSerializer(serializers.Serializer):
+    customer = serializers.UUIDField()
+    customer_name = serializers.CharField()
+    amount = serializers.IntegerField()
+    kind = serializers.ChoiceField(choices=["deposit", "credit_note"])
+    note = serializers.CharField(required=False)
+
+
+class CustomerAdvanceListSerializer(serializers.Serializer):
+    results = CustomerAdvanceSerializer(many=True)
