@@ -1,0 +1,1178 @@
+[
+  {
+    "name": "Fer à béton (barre 12 m)",
+    "brand": null,
+    "image": "fer-a-beton-barre-12-m.jpg",
+    "name_ar": "حديد التسليح (قضيب 12 م)",
+    "credit": {
+      "author": "W.carter",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:A_bunch_of_rebar.jpg",
+      "title": "File:A bunch of rebar.jpg"
+    }
+  },
+  {
+    "name": "Ciment CPJ 45 (sac 50 kg)",
+    "brand": null,
+    "image": "ciment-cpj-45-sac-50-kg.jpg",
+    "name_ar": "إسمنت CPJ 45 (كيس 50 كغ)",
+    "credit": {
+      "author": "Krugerr",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Portland_cement_CEM_I_42,5_R_(bag).jpg",
+      "title": "File:Portland cement CEM I 42,5 R (bag).jpg"
+    }
+  },
+  {
+    "name": "Chevilles 8 mm (boîte de 100)",
+    "brand": null,
+    "image": "chevilles-8-mm-boite-de-100.jpg",
+    "name_ar": "مسامير تثبيت 8 مم (علبة من 100)",
+    "credit": {
+      "author": "Bronzaclose",
+      "license": "CC0",
+      "source": "https://commons.wikimedia.org/wiki/File:%D0%94%D1%8E%D0%B1%D0%B5%D0%BB%D1%8C-%D0%B3%D0%B2%D0%BE%D0%B7%D0%B4%D1%8C_(%D0%B4%D1%8E%D0%B1%D0%B5%D0%BB%D1%8C_%D0%B8_%D0%B3%D0%B2%D0%BE%D0%B7%D0%B4%D1%8C).JPG",
+      "title": "File:Дюбель-гвоздь (дюбель и гвоздь).JPG"
+    }
+  },
+  {
+    "name": "Vis à bois 4 x 40 (boîte de 200)",
+    "brand": null,
+    "image": "vis-a-bois-4-x-40-boite-de-200.jpg",
+    "name_ar": "براغي خشب 4 × 40 (علبة من 200)",
+    "credit": {
+      "author": "Unknown author",
+      "license": "CC BY 3.0",
+      "source": "https://commons.wikimedia.org/wiki/File:4_SPAX_screws_with_partial_and_full_thread.jpg",
+      "title": "File:4 SPAX screws with partial and full thread.jpg"
+    }
+  },
+  {
+    "name": "Clous acier (au kg)",
+    "brand": null,
+    "image": "clous-acier-au-kg.jpg",
+    "name_ar": "مسامير فولاذية (بالكيلو)",
+    "credit": {
+      "author": "Hubertl",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Wrought_nails_17._century,_Hofburg_Vienna_5796.jpg",
+      "title": "File:Wrought nails 17. century, Hofburg Vienna 5796.jpg"
+    }
+  },
+  {
+    "name": "Pinceau plat 50 mm",
+    "brand": null,
+    "image": "pinceau-plat-50-mm.jpg",
+    "name_ar": "فرشاة دهان مسطحة 50 مم",
+    "credit": {
+      "author": "flakeparadigm",
+      "license": "CC BY 2.0",
+      "source": "https://www.flickr.com/photos/28288882@N08/4687752030",
+      "title": "Paint Brush"
+    }
+  },
+  {
+    "name": "Rouleau 180 mm",
+    "brand": null,
+    "image": "rouleau-180-mm.jpg",
+    "name_ar": "رولة دهان 180 مم",
+    "credit": {
+      "author": "r. nial bradshaw",
+      "license": "CC BY 2.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Paint-roller_(23956075297).jpg",
+      "title": "File:Paint-roller (23956075297).jpg"
+    }
+  },
+  {
+    "name": "Peinture intérieure blanche",
+    "brand": "Jotun",
+    "image": "jotun-peinture-interieure-blanche.jpg",
+    "name_ar": "دهان داخلي أبيض Jotun",
+    "credit": {
+      "author": "United Soybean Board",
+      "license": "CC BY 2.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Open_Soy_Paint_Cans_(10481725136).jpg",
+      "title": "File:Open Soy Paint Cans (10481725136).jpg"
+    }
+  },
+  {
+    "name": "Disjoncteur 16 A",
+    "brand": "Schneider",
+    "image": "schneider-disjoncteur-16-a.jpg",
+    "name_ar": "قاطع كهربائي Schneider ‏16 أمبير",
+    "credit": {
+      "author": "Kae",
+      "license": "CC BY-SA 3.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Circuit_breaker_2_pole_on_DIN_rail.JPG",
+      "title": "File:Circuit breaker 2 pole on DIN rail.JPG"
+    }
+  },
+  {
+    "name": "Prise murale 2P+T",
+    "brand": "Legrand",
+    "image": "legrand-prise-murale-2p-t.jpg",
+    "name_ar": "مقبس حائطي Legrand مع أرضي",
+    "credit": {
+      "author": "adrileb",
+      "license": "CC BY 2.0",
+      "source": "https://www.flickr.com/photos/8395726@N08/3674318699",
+      "title": "Happy electricity"
+    }
+  },
+  {
+    "name": "Ampoule LED 9 W E27",
+    "brand": "Philips",
+    "image": "philips-ampoule-led-9-w-e27.jpg",
+    "name_ar": "مصباح LED من Philips ‏9 واط E27",
+    "credit": {
+      "author": "Kingled",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:%C5%BBar%C3%B3wka_led_E27_10W_bulb_kingled_krakow.jpg",
+      "title": "File:Żarówka led E27 10W bulb kingled krakow.jpg"
+    }
+  },
+  {
+    "name": "Câble rigide H07V-U (au mètre)",
+    "brand": null,
+    "image": "cable-rigide-h07v-u-au-metre.jpg",
+    "name_ar": "سلك كهربائي صلب H07V-U (بالمتر)",
+    "credit": {
+      "author": "Petar Milošević",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Electric_guide_3%C3%972.5_mm.jpg",
+      "title": "File:Electric guide 3×2.5 mm.jpg"
+    }
+  },
+  {
+    "name": "Ruban téflon",
+    "brand": null,
+    "image": "ruban-teflon.jpg",
+    "name_ar": "شريط تفلون",
+    "credit": {
+      "author": "Kees08",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:PTFE_Rolls.png",
+      "title": "File:PTFE Rolls.png"
+    }
+  },
+  {
+    "name": "Robinet mélangeur lavabo",
+    "brand": null,
+    "image": "robinet-melangeur-lavabo.jpg",
+    "name_ar": "خلاط مغسلة",
+    "credit": {
+      "author": "vieninsweden",
+      "license": "CC0 1.0",
+      "source": "https://www.flickr.com/photos/134679901@N08/29791449633",
+      "title": "Dripping Bathroom Faucet"
+    }
+  },
+  {
+    "name": "Tube PVC pression (barre 4 m)",
+    "brand": null,
+    "image": "tube-pvc-pression-barre-4-m.jpg",
+    "name_ar": "أنبوب PVC للضغط (قضيب 4 م)",
+    "credit": {
+      "author": "Pam_Broviak",
+      "license": "CC BY-SA 2.0",
+      "source": "https://www.flickr.com/photos/23870457@N06/2269567444",
+      "title": "PVC Pipe"
+    }
+  },
+  {
+    "name": "Pince universelle",
+    "brand": "Total",
+    "image": "total-pince-universelle.jpg",
+    "name_ar": "كماشة متعددة الاستعمال Total",
+    "credit": {
+      "author": "chimpwithcan",
+      "license": "CC BY 2.0",
+      "source": "https://www.flickr.com/photos/188454520@N02/49917490341",
+      "title": "Combination Plier Hand Tool Tools Edited 2020"
+    }
+  },
+  {
+    "name": "Coffret tournevis",
+    "brand": "Ingco",
+    "image": "ingco-coffret-tournevis.jpg",
+    "name_ar": "طقم مفكات Ingco",
+    "credit": {
+      "author": "oomlout",
+      "license": "CC BY-SA 2.0",
+      "source": "https://www.flickr.com/photos/33504192@N00/4149937201",
+      "title": "Precision Screwdriver Set (in box) - TOOL-10-SCR_01"
+    }
+  },
+  {
+    "name": "Mètre ruban",
+    "brand": "Stanley",
+    "image": "stanley-metre-ruban.jpg",
+    "name_ar": "شريط قياس Stanley",
+    "credit": {
+      "author": "wwarby",
+      "license": "CC BY 2.0",
+      "source": "https://www.flickr.com/photos/26782864@N00/4915969081",
+      "title": "Tape Measure"
+    }
+  },
+  {
+    "name": "Marteau de coffreur",
+    "brand": "Stanley",
+    "image": "stanley-marteau-de-coffreur.jpg",
+    "name_ar": "مطرقة نجارة Stanley",
+    "credit": {
+      "author": "Homedust",
+      "license": "CC BY 2.0",
+      "source": "https://www.flickr.com/photos/159630537@N08/28918563378",
+      "title": "Black Claw Hammer on Brown Wooden Plank - Credit to http://homedust.com/"
+    }
+  },
+  {
+    "name": "Perceuse visseuse sans fil 20 V",
+    "brand": "Ingco",
+    "image": "ingco-perceuse-visseuse-sans-fil-20-v.jpg",
+    "name_ar": "مثقاب ومفك لاسلكي Ingco ‏20 فولت",
+    "credit": {
+      "author": "HomeSpot HQ",
+      "license": "CC BY 2.0",
+      "source": "https://www.flickr.com/photos/86639298@N02/8559707469",
+      "title": "Cordless Drill"
+    }
+  },
+  {
+    "name": "Meuleuse 115 mm GA4530",
+    "brand": "Makita",
+    "image": "makita-meuleuse-115-mm-ga4530.jpg",
+    "name_ar": "صاروخ تجليخ Makita GA4530 ‏115 مم",
+    "credit": {
+      "author": "Public Domain Photos",
+      "license": "CC BY 2.0",
+      "source": "https://www.flickr.com/photos/28958738@N06/8410007770",
+      "title": "Angle-Grinder-cutting-with-Sparks__IMG_2866"
+    }
+  },
+  {
+    "name": "Perceuse à percussion GSB 13 RE",
+    "brand": "Bosch",
+    "image": "bosch-perceuse-a-percussion-gsb-13-re.jpg",
+    "name_ar": "مثقاب طرقي Bosch GSB 13 RE",
+    "credit": {
+      "author": "toolstop",
+      "license": "CC BY 2.0",
+      "source": "https://www.flickr.com/photos/42408834@N06/3925447671",
+      "title": "Bosch GSB 16RE Impact Drill"
+    }
+  },
+  {
+    "name": "Compresses stériles (boîte de 25)",
+    "brand": null,
+    "image": "compresses-steriles-boite-de-25.jpg",
+    "name_ar": "كمادات معقمة (علبة من 25)",
+    "credit": {
+      "author": "Korrupt",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Hydrofaser_Wundauflage.jpg",
+      "title": "File:Hydrofaser Wundauflage.jpg"
+    }
+  },
+  {
+    "name": "Thermomètre digital",
+    "brand": "Microlife",
+    "image": "microlife-thermometre-digital.jpg",
+    "name_ar": "ميزان حرارة رقمي Microlife",
+    "credit": {
+      "author": "nenad53",
+      "license": "CC BY 2.0",
+      "source": "https://www.flickr.com/photos/202780880@N02/54592704735",
+      "title": "Nurse checks child's temperature with digital thermometer in a clinical setting"
+    }
+  },
+  {
+    "name": "Glucomètre Instant",
+    "brand": "Accu-Chek",
+    "image": "accu-chek-glucometre-instant.jpg",
+    "name_ar": "جهاز قياس السكر Accu-Chek Instant",
+    "credit": {
+      "author": "An-d",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Blutzuckermessger%C3%A4t_Accu-Chek_Aviva_Connect,_2017.jpg",
+      "title": "File:Blutzuckermessgerät Accu-Chek Aviva Connect, 2017.jpg"
+    }
+  },
+  {
+    "name": "Tensiomètre M3 Comfort",
+    "brand": "Omron",
+    "image": "omron-tensiometre-m3-comfort.jpg",
+    "name_ar": "جهاز قياس الضغط Omron M3 Comfort",
+    "credit": {
+      "author": "joebeone",
+      "license": "CC BY 2.0",
+      "source": "https://www.flickr.com/photos/71753172@N00/769857775",
+      "title": "My new BP monitor!"
+    }
+  },
+  {
+    "name": "Gel hydroalcoolique",
+    "brand": null,
+    "image": "gel-hydroalcoolique.jpg",
+    "name_ar": "جل كحولي معقم لليدين",
+    "credit": {
+      "author": "Adoscam",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:COVID-19_au_B%C3%A9nin_flacons_de_gel_hydroalcoolique_sur_une_table1.jpg",
+      "title": "File:COVID-19 au Bénin flacons de gel hydroalcoolique sur une table1.jpg"
+    }
+  },
+  {
+    "name": "Antiseptique liquide",
+    "brand": "Dettol",
+    "image": "dettol-antiseptique-liquide.jpg",
+    "name_ar": "مطهر سائل Dettol",
+    "credit": {
+      "author": "",
+      "license": "CC BY 4.0",
+      "source": "https://collections.museumsvictoria.com.au/items/262117",
+      "title": "Antiseptic - 'Dettol', First Aid Kit, Homemade, Sophus Bruhn, circa 1970-1990"
+    }
+  },
+  {
+    "name": "Dentifrice Total",
+    "brand": "Colgate",
+    "image": "colgate-dentifrice-total.jpg",
+    "name_ar": "معجون أسنان Colgate Total",
+    "credit": {
+      "author": "Mikel Lizarralde",
+      "license": "CC BY-SA 2.0",
+      "source": "https://www.flickr.com/photos/78991296@N00/2708440952",
+      "title": "Colgate toothpaste"
+    }
+  },
+  {
+    "name": "Lait NAN Optipro 400 g",
+    "brand": "Nestlé",
+    "image": "nestle-lait-nan-optipro-400-g.jpg",
+    "name_ar": "حليب أطفال NAN Optipro من Nestlé، 400 غ",
+    "credit": {
+      "author": "Neil Rickards",
+      "license": "CC BY 2.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Nestl%C3%A9_Nan.jpg",
+      "title": "File:Nestlé Nan.jpg"
+    }
+  },
+  {
+    "name": "Couches Baby-Dry",
+    "brand": "Pampers",
+    "image": "pampers-couches-baby-dry.jpg",
+    "name_ar": "حفاضات Pampers Baby-Dry",
+    "credit": {
+      "author": "alberth2",
+      "license": "CC BY-SA 2.0",
+      "source": "https://www.flickr.com/photos/84056180@N00/2508686154",
+      "title": "Pampers Swaddlers Size 2"
+    }
+  },
+  {
+    "name": "Anthelios SPF 50+",
+    "brand": "La Roche-Posay",
+    "image": "la-roche-posay-anthelios-spf-50.jpg",
+    "name_ar": "واقي شمس La Roche-Posay Anthelios SPF 50+",
+    "credit": {
+      "author": "Netstars22",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:LRP_sunscreen_bottle.jpg",
+      "title": "File:LRP sunscreen bottle.jpg"
+    }
+  },
+  {
+    "name": "Sensibio H2O",
+    "brand": "Bioderma",
+    "image": "bioderma-sensibio-h2o.jpg",
+    "name_ar": "ماء ميسيلار Bioderma Sensibio H2O",
+    "credit": {
+      "author": "Alpantex",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Suncademy_airless_bottle_sunscreen_citronella_active_ingredients.jpg",
+      "title": "File:Suncademy airless bottle sunscreen citronella active ingredients.jpg"
+    }
+  },
+  {
+    "name": "Crème Nivea",
+    "brand": "Nivea",
+    "image": "nivea-creme-nivea.jpg",
+    "name_ar": "كريم Nivea",
+    "credit": {
+      "author": "StromBer",
+      "license": "CC BY-SA 3.0",
+      "source": "https://commons.wikimedia.org/wiki/File:2012Nivea100years.jpg",
+      "title": "File:2012Nivea100years.jpg"
+    }
+  },
+  {
+    "name": "Biafine émulsion",
+    "brand": "Biafine",
+    "image": "biafine-biafine-emulsion.jpg",
+    "name_ar": "مستحلب Biafine للحروق",
+    "credit": {
+      "author": "Shagun",
+      "license": "CC BY 2.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Shaving_software_pics_004,_M%C3%BChle_Pinsel_Plain_shaving_cream_(382338900).jpg",
+      "title": "File:Shaving software pics 004, Mühle Pinsel Plain shaving cream (382338900).jpg"
+    }
+  },
+  {
+    "name": "Vitamine C",
+    "brand": "UPSA",
+    "image": "upsa-vitamine-c.jpg",
+    "name_ar": "فيتامين C من UPSA",
+    "credit": {
+      "author": "Hypersonic man 11",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Redoxon_Double_Action_Vitamin_C_standard_tablets_.jpg",
+      "title": "File:Redoxon Double Action Vitamin C standard tablets .jpg"
+    }
+  },
+  {
+    "name": "Smecta",
+    "brand": "Ipsen",
+    "image": "ipsen-smecta.jpg",
+    "name_ar": "سميكتا Smecta",
+    "credit": {
+      "author": "R1235613",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:%E8%88%92%E8%85%B9%E9%81%94(Smecta).jpg",
+      "title": "File:舒腹達(Smecta).jpg"
+    }
+  },
+  {
+    "name": "Spasfon",
+    "brand": "Teva",
+    "image": "teva-spasfon.jpg",
+    "name_ar": "سباسفون Spasfon",
+    "credit": {
+      "author": "cygnus921",
+      "license": "CC BY 2.0",
+      "source": "https://www.flickr.com/photos/11726702@N07/2612191090",
+      "title": "Prilosec Blister Pack 002"
+    }
+  },
+  {
+    "name": "Efferalgan",
+    "brand": "UPSA",
+    "image": "upsa-efferalgan.jpg",
+    "name_ar": "إفيرالغان Efferalgan",
+    "credit": {
+      "author": "doctor4uuk",
+      "license": "CC BY 2.0",
+      "source": "https://www.flickr.com/photos/184648197@N03/48797660303",
+      "title": "Paracetamol Tablets - Medication by www.doctor-4-u.co.uk"
+    }
+  },
+  {
+    "name": "Doliprane enfant",
+    "brand": "Sanofi",
+    "image": "sanofi-doliprane-enfant.jpg",
+    "name_ar": "دوليبران للأطفال Doliprane",
+    "credit": {
+      "author": "Mysid",
+      "license": "Public domain",
+      "source": "https://commons.wikimedia.org/wiki/File:Cough_medicine.jpg",
+      "title": "File:Cough medicine.jpg"
+    }
+  },
+  {
+    "name": "Doliprane",
+    "brand": "Sanofi",
+    "image": "sanofi-doliprane.jpg",
+    "name_ar": "دوليبران Doliprane",
+    "credit": {
+      "author": "Retired electrician",
+      "license": "CC0",
+      "source": "https://commons.wikimedia.org/wiki/File:%D0%9F%D0%B0%D1%80%D0%B0%D1%86%D0%B5%D1%82%D0%B0%D0%BC%D0%BE%D0%BB,_%D0%A4%D0%B0%D1%80%D0%BC%D1%81%D1%82%D0%B0%D0%BD%D0%B4%D0%B0%D1%80%D1%82_%D0%9A%D1%83%D1%80%D1%81%D0%BA_(Paracetamol)_01.jpg",
+      "title": "File:Парацетамол, Фармстандарт Курск (Paracetamol) 01.jpg"
+    }
+  },
+  {
+    "name": "Ventilateur de plafond",
+    "brand": "Midea",
+    "image": "midea-ventilateur-de-plafond.jpg",
+    "name_ar": "مروحة سقف Midea",
+    "credit": {
+      "author": ".Larry Page",
+      "license": "CC BY 2.0",
+      "source": "https://www.flickr.com/photos/96029422@N00/3752656179",
+      "title": "Kitchen ceiling fan"
+    }
+  },
+  {
+    "name": "Ventilateur sur pied 16 pouces",
+    "brand": "Binatone",
+    "image": "binatone-ventilateur-sur-pied-16-pouces.jpg",
+    "name_ar": "مروحة أرضية Binatone مقاس 16 بوصة",
+    "credit": {
+      "author": "Curpharar",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Modern_electric_fan_at_a_school.jpg",
+      "title": "File:Modern electric fan at a school.jpg"
+    }
+  },
+  {
+    "name": "Micro-ondes 20 L",
+    "brand": "Binatone",
+    "image": "binatone-micro-ondes-20-l.jpg",
+    "name_ar": "فرن ميكروويف Binatone سعة 20 لتر",
+    "credit": {
+      "author": "Stilfehler",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Ikea_Sektion_Microwave_Oven_Installation_01.jpg",
+      "title": "File:Ikea Sektion Microwave Oven Installation 01.jpg"
+    }
+  },
+  {
+    "name": "Bouilloire 1,7 L",
+    "brand": "Kenwood",
+    "image": "kenwood-bouilloire-1-7-l.jpg",
+    "name_ar": "غلاية كهربائية Kenwood سعة 1.7 لتر",
+    "credit": {
+      "author": "Jacek Halicki",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:2023_Czajnik_elektryczny_Bosch_(2).jpg",
+      "title": "File:2023 Czajnik elektryczny Bosch (2).jpg"
+    }
+  },
+  {
+    "name": "Fer à repasser Virtuo",
+    "brand": "Tefal",
+    "image": "tefal-fer-a-repasser-virtuo.jpg",
+    "name_ar": "مكواة بخار Tefal Virtuo",
+    "credit": {
+      "author": "Peter Häll",
+      "license": "CC0",
+      "source": "https://commons.wikimedia.org/wiki/File:Philips_steam_iron_model_HD_1256_A.jpg",
+      "title": "File:Philips steam iron model HD 1256 A.jpg"
+    }
+  },
+  {
+    "name": "Blender Blendforce",
+    "brand": "Moulinex",
+    "image": "moulinex-blender-blendforce.jpg",
+    "name_ar": "خلاط Moulinex Blendforce",
+    "credit": {
+      "author": "",
+      "license": "CC0",
+      "source": "https://commons.wikimedia.org/wiki/File:Elektrische_blender_van_het_merk_Princess_-_INDUS_V09861.JPG",
+      "title": "File:Elektrische blender van het merk Princess - INDUS V09861.JPG"
+    }
+  },
+  {
+    "name": "Lave-linge MA200",
+    "brand": "Midea",
+    "image": "midea-lave-linge-ma200.jpg",
+    "name_ar": "غسالة ملابس Midea MA200",
+    "credit": {
+      "author": "Baruzza",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Washing-machine.jpg",
+      "title": "File:Washing-machine.jpg"
+    }
+  },
+  {
+    "name": "Smart TV S5400",
+    "brand": "TCL",
+    "image": "tcl-smart-tv-s5400.jpg",
+    "name_ar": "تلفاز ذكي TCL S5400",
+    "credit": {
+      "author": "",
+      "license": "Unsplash License",
+      "source": "https://unsplash.com/license",
+      "title": ""
+    }
+  },
+  {
+    "name": "Crystal UHD CU7000",
+    "brand": "Samsung",
+    "image": "samsung-crystal-uhd-cu7000.jpg",
+    "name_ar": "تلفاز Samsung Crystal UHD CU7000",
+    "credit": {
+      "author": "Samsung Belgium",
+      "license": "CC BY 2.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Samsung_UE65F9005STXXE_front_black_20130613.jpg",
+      "title": "File:Samsung UE65F9005STXXE front black 20130613.jpg"
+    }
+  },
+  {
+    "name": "Climatiseur Dual Inverter",
+    "brand": "LG",
+    "image": "lg-climatiseur-dual-inverter.jpg",
+    "name_ar": "مكيف هواء LG Dual Inverter",
+    "credit": {
+      "author": "Dinkun Chen",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Panasonic_AIR_CONDITIONER_INDOOR_UNIT_CS-C10KJ2_(2).jpg",
+      "title": "File:Panasonic AIR CONDITIONER INDOOR UNIT CS-C10KJ2 (2).jpg"
+    }
+  },
+  {
+    "name": "Climatiseur Lomo",
+    "brand": "Gree",
+    "image": "gree-climatiseur-lomo.jpg",
+    "name_ar": "مكيف هواء Gree Lomo",
+    "credit": {
+      "author": "Curpharar",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Split-type_Koppel_air_conditioner_at_Gateway_Hotel.jpg",
+      "title": "File:Split-type Koppel air conditioner at Gateway Hotel.jpg"
+    }
+  },
+  {
+    "name": "Climatiseur Mission",
+    "brand": "Midea",
+    "image": "midea-climatiseur-mission.jpg",
+    "name_ar": "مكيف هواء Midea Mission",
+    "credit": {
+      "author": "Kskhh",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Samsung_Smart_Split_AC.jpg",
+      "title": "File:Samsung Smart Split AC.jpg"
+    }
+  },
+  {
+    "name": "Congélateur coffre HS221",
+    "brand": "Beko",
+    "image": "beko-congelateur-coffre-hs221.jpg",
+    "name_ar": "مجمد أفقي Beko HS221",
+    "credit": {
+      "author": "David Jackmanson",
+      "license": "CC BY 2.0",
+      "source": "https://www.flickr.com/photos/58301516@N00/16501162460",
+      "title": "Chest freezer arrived! Cropped and 'Auto Fix' applied in Pixlr."
+    }
+  },
+  {
+    "name": "Réfrigérateur double porte GN-B392",
+    "brand": "LG",
+    "image": "lg-refrigerateur-double-porte-gn-b392.jpg",
+    "name_ar": "ثلاجة ببابين LG GN-B392",
+    "credit": {
+      "author": "Dinkun Chen",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:SAMSUNG_REFRIGERATOR_RF60J9030WZ.jpg",
+      "title": "File:SAMSUNG REFRIGERATOR RF60J9030WZ.jpg"
+    }
+  },
+  {
+    "name": "Réfrigérateur combiné RB34",
+    "brand": "Samsung",
+    "image": "samsung-refrigerateur-combine-rb34.jpg",
+    "name_ar": "ثلاجة مع مجمد سفلي Samsung RB34",
+    "credit": {
+      "author": "Dinkun Chen",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:SAMSUNG_REFRIGERATOR_RF60J9030WZ.jpg",
+      "title": "File:SAMSUNG REFRIGERATOR RF60J9030WZ.jpg"
+    }
+  },
+  {
+    "name": "Verre trempé iPhone 15",
+    "brand": "Generic",
+    "image": "generic-verre-trempe-iphone-15.jpg",
+    "name_ar": "زجاج حماية لشاشة iPhone 15",
+    "credit": {
+      "author": "ekosunaryo",
+      "license": "CC BY-SA 2.0",
+      "source": "https://www.flickr.com/photos/149902810@N07/45450020214",
+      "title": "amFilm Razer Phone Screen Protector Glass, Tempered Glass Screen Protector for Razer Phone 2017 (2-Pack)"
+    }
+  },
+  {
+    "name": "Verre trempé Galaxy A55",
+    "brand": "Generic",
+    "image": "generic-verre-trempe-galaxy-a55.jpg",
+    "name_ar": "زجاج حماية لشاشة Galaxy A55",
+    "credit": {
+      "author": "ekosunaryo",
+      "license": "CC BY-SA 2.0",
+      "source": "https://www.flickr.com/photos/149902810@N07/45450020214",
+      "title": "amFilm Razer Phone Screen Protector Glass, Tempered Glass Screen Protector for Razer Phone 2017 (2-Pack)"
+    }
+  },
+  {
+    "name": "Coque silicone iPhone 15",
+    "brand": "Generic",
+    "image": "generic-coque-silicone-iphone-15.jpg",
+    "name_ar": "غطاء سيليكون لـ iPhone 15",
+    "credit": {
+      "author": "Kai Hendry",
+      "license": "CC BY 2.0",
+      "source": "https://www.flickr.com/photos/16105436@N00/16059792107",
+      "title": "iPhone 6 Silicone Case failing"
+    }
+  },
+  {
+    "name": "Power bank 20 000 mAh",
+    "brand": "Oraimo",
+    "image": "oraimo-power-bank-20-000-mah.jpg",
+    "name_ar": "بطارية متنقلة Oraimo ‏20000 مللي أمبير",
+    "credit": {
+      "author": "Tranpan23",
+      "license": "CC BY 2.0",
+      "source": "https://www.flickr.com/photos/78077658@N02/9720052690",
+      "title": "モバイルバッテリー ANKER Power Bank 4,500mAh"
+    }
+  },
+  {
+    "name": "Câble Lightning 1 m",
+    "brand": "Oraimo",
+    "image": "oraimo-cable-lightning-1-m.jpg",
+    "name_ar": "كابل Lightning من Oraimo ‏1 م",
+    "credit": {
+      "author": "Richard Unten",
+      "license": "CC BY 2.0",
+      "source": "https://www.flickr.com/photos/18923035@N00/8027075541",
+      "title": "Apple 30-pin Dock Cable v. Lightning Cable"
+    }
+  },
+  {
+    "name": "Câble USB-C 1 m",
+    "brand": "Oraimo",
+    "image": "oraimo-cable-usb-c-1-m.jpg",
+    "name_ar": "كابل USB-C من Oraimo ‏1 م",
+    "credit": {
+      "author": "Brett Jordan",
+      "license": "CC BY 2.0",
+      "source": "https://www.flickr.com/photos/55497864@N00/48727306262",
+      "title": "USB C Cable End"
+    }
+  },
+  {
+    "name": "Chargeur rapide 25W",
+    "brand": "Samsung",
+    "image": "samsung-chargeur-rapide-25w.jpg",
+    "name_ar": "شاحن سريع Samsung ‏25 واط",
+    "credit": {
+      "author": "campuscodi",
+      "license": "CC0 1.0",
+      "source": "https://www.flickr.com/photos/12375388@N08/26449550804",
+      "title": "Samsung A5 charger"
+    }
+  },
+  {
+    "name": "Chargeur 20W",
+    "brand": "Apple",
+    "image": "apple-chargeur-20w.jpg",
+    "name_ar": "شاحن Apple ‏20 واط",
+    "credit": {
+      "author": "Tony Webster from Minneapolis, Minnesota, United States",
+      "license": "CC BY 2.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Apple_96W_USB_Type-C_Power_Adapter_for_new_16_inch_MacBook_Pro_(49165128252).jpg",
+      "title": "File:Apple 96W USB Type-C Power Adapter for new 16 inch MacBook Pro (49165128252).jpg"
+    }
+  },
+  {
+    "name": "Écouteurs filaires Halo",
+    "brand": "Oraimo",
+    "image": "oraimo-ecouteurs-filaires-halo.jpg",
+    "name_ar": "سماعات سلكية Oraimo Halo",
+    "credit": {
+      "author": "Ivan Radic",
+      "license": "CC BY 2.0",
+      "source": "https://www.flickr.com/photos/26344495@N05/32656222547",
+      "title": "Wired earphones and a phone"
+    }
+  },
+  {
+    "name": "Tune 520BT",
+    "brand": "JBL",
+    "image": "jbl-tune-520bt.jpg",
+    "name_ar": "سماعة رأس لاسلكية JBL Tune 520BT",
+    "credit": {
+      "author": "Jimmy Benson",
+      "license": "CC BY 2.0",
+      "source": "https://www.flickr.com/photos/26148267@N07/30223900824",
+      "title": "JBL E40BT @ Solidworks"
+    }
+  },
+  {
+    "name": "FreePods 4",
+    "brand": "Oraimo",
+    "image": "oraimo-freepods-4.jpg",
+    "name_ar": "سماعات لاسلكية Oraimo FreePods 4",
+    "credit": {
+      "author": "Fairphone",
+      "license": "CC BY-SA 2.0",
+      "source": "https://www.flickr.com/photos/60295192@N08/51548822927",
+      "title": "Fairphone+True+Wireless+Earbuds+with+Charging+Case"
+    }
+  },
+  {
+    "name": "Galaxy Buds FE",
+    "brand": "Samsung",
+    "image": "samsung-galaxy-buds-fe.jpg",
+    "name_ar": "سماعات Galaxy Buds FE",
+    "credit": {
+      "author": "Kskhh",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Samsung_Galaxy_Buds.jpg",
+      "title": "File:Samsung Galaxy Buds.jpg"
+    }
+  },
+  {
+    "name": "AirPods 3",
+    "brand": "Apple",
+    "image": "apple-airpods-3.jpg",
+    "name_ar": "سماعات AirPods 3",
+    "credit": {
+      "author": "pestoverde",
+      "license": "CC BY 2.0",
+      "source": "https://www.flickr.com/photos/30364433@N05/28954822254",
+      "title": "New Apple AirPods with iPhone 7"
+    }
+  },
+  {
+    "name": "AirPods Pro 2",
+    "brand": "Apple",
+    "image": "apple-airpods-pro-2.jpg",
+    "name_ar": "سماعات AirPods Pro 2",
+    "credit": {
+      "author": "modestoweller",
+      "license": "CC BY 2.0",
+      "source": "https://www.flickr.com/photos/185486560@N03/49058501246",
+      "title": "Things You May To Know About AirPods Pro"
+    }
+  },
+  {
+    "name": "Watch 2 Pro",
+    "brand": "Oraimo",
+    "image": "oraimo-watch-2-pro.jpg",
+    "name_ar": "ساعة ذكية Oraimo Watch 2 Pro",
+    "credit": {
+      "author": "",
+      "license": "Unsplash License",
+      "source": "https://unsplash.com/license",
+      "title": ""
+    }
+  },
+  {
+    "name": "Galaxy Watch6",
+    "brand": "Samsung",
+    "image": "samsung-galaxy-watch6.jpg",
+    "name_ar": "ساعة Galaxy Watch6",
+    "credit": {
+      "author": "Ka Kit Pang",
+      "license": "CC BY 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Galaxy_Watch.jpg",
+      "title": "File:Galaxy Watch.jpg"
+    }
+  },
+  {
+    "name": "Watch SE",
+    "brand": "Apple",
+    "image": "apple-watch-se.jpg",
+    "name_ar": "ساعة Apple Watch SE",
+    "credit": {
+      "author": "Yasunobu Ikeda",
+      "license": "CC BY-SA 2.0",
+      "source": "https://www.flickr.com/photos/88403964@N00/17111109088",
+      "title": "Apple -  Watch Sport"
+    }
+  },
+  {
+    "name": "Switch",
+    "brand": "Nintendo",
+    "image": "nintendo-switch.jpg",
+    "name_ar": "Nintendo Switch",
+    "credit": {
+      "author": "Evan-Amos",
+      "license": "Public domain",
+      "source": "https://commons.wikimedia.org/wiki/File:Nintendo-Switch-Console-Docked-wJoyConRB.jpg",
+      "title": "File:Nintendo-Switch-Console-Docked-wJoyConRB.jpg"
+    }
+  },
+  {
+    "name": "Xbox Series S",
+    "brand": "Microsoft",
+    "image": "microsoft-xbox-series-s.jpg",
+    "name_ar": "Xbox Series S",
+    "credit": {
+      "author": "AsmodeanUnderscore",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Xbox_Series_S_with_controller.jpg",
+      "title": "File:Xbox Series S with controller.jpg"
+    }
+  },
+  {
+    "name": "PlayStation 4 Slim",
+    "brand": "Sony",
+    "image": "sony-playstation-4-slim.jpg",
+    "name_ar": "PlayStation 4 Slim",
+    "credit": {
+      "author": "Kskhh",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Sony_PlayStation_4_Slim.jpg",
+      "title": "File:Sony PlayStation 4 Slim.jpg"
+    }
+  },
+  {
+    "name": "PlayStation 5 Slim",
+    "brand": "Sony",
+    "image": "sony-playstation-5-slim.jpg",
+    "name_ar": "PlayStation 5 Slim",
+    "credit": {
+      "author": "Howardcorn33",
+      "license": "CC0",
+      "source": "https://commons.wikimedia.org/wiki/File:Black_and_white_Playstation_5_base_edition_with_controller.png",
+      "title": "File:Black and white Playstation 5 base edition with controller.png"
+    }
+  },
+  {
+    "name": "MacBook Air M2",
+    "brand": "Apple",
+    "image": "apple-macbook-air-m2.jpg",
+    "name_ar": "حاسوب MacBook Air M2",
+    "credit": {
+      "author": "User:KKPCW",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Macbook_Air_15_inch_-_2_(blurred).jpg",
+      "title": "File:Macbook Air 15 inch - 2 (blurred).jpg"
+    }
+  },
+  {
+    "name": "IdeaPad 3",
+    "brand": "Lenovo",
+    "image": "lenovo-ideapad-3.jpg",
+    "name_ar": "حاسوب محمول Lenovo IdeaPad 3",
+    "credit": {
+      "author": "TAKA@P.P.R.S",
+      "license": "CC BY-SA 2.0",
+      "source": "https://www.flickr.com/photos/26414679@N05/9696285389",
+      "title": "Lenovo - IdeaPad Yoga 13_018"
+    }
+  },
+  {
+    "name": "250 G9",
+    "brand": "HP",
+    "image": "hp-250-g9.jpg",
+    "name_ar": "حاسوب محمول HP 250 G9",
+    "credit": {
+      "author": "",
+      "license": "Unsplash License",
+      "source": "https://unsplash.com/license",
+      "title": ""
+    }
+  },
+  {
+    "name": "Galaxy Tab A9",
+    "brand": "Samsung",
+    "image": "samsung-galaxy-tab-a9.jpg",
+    "name_ar": "جهاز لوحي Galaxy Tab A9",
+    "credit": {
+      "author": "Janitors",
+      "license": "CC BY 2.0",
+      "source": "https://www.flickr.com/photos/65265630@N03/14639547329",
+      "title": "Samsung Galaxy Tab S"
+    }
+  },
+  {
+    "name": "iPad 10e génération",
+    "brand": "Apple",
+    "image": "apple-ipad-10e-generation.jpg",
+    "name_ar": "جهاز iPad الجيل العاشر",
+    "credit": {
+      "author": "Wiikiipediia",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Ipadtenthgen.jpg",
+      "title": "File:Ipadtenthgen.jpg"
+    }
+  },
+  {
+    "name": "110 4G",
+    "brand": "Nokia",
+    "image": "nokia-110-4g.jpg",
+    "name_ar": "هاتف Nokia 110 4G",
+    "credit": {
+      "author": "Alessandro Antonelli",
+      "license": "CC BY 3.0",
+      "source": "https://commons.wikimedia.org/wiki/File:2013_Nokia_105_-_04.jpg",
+      "title": "File:2013 Nokia 105 - 04.jpg"
+    }
+  },
+  {
+    "name": "105",
+    "brand": "Nokia",
+    "image": "nokia-105.jpg",
+    "name_ar": "هاتف Nokia 105",
+    "credit": {
+      "author": "Multicherry",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Nokia_105_(2019_4th_Edn_Black)_(Home_screen).jpg",
+      "title": "File:Nokia 105 (2019 4th Edn Black) (Home screen).jpg"
+    }
+  },
+  {
+    "name": "A70",
+    "brand": "itel",
+    "image": "itel-a70.jpg",
+    "name_ar": "هاتف itel A70",
+    "credit": {
+      "author": "JGBlue1509",
+      "license": "CC0",
+      "source": "https://commons.wikimedia.org/wiki/File:Itel_A50_rear.jpg",
+      "title": "File:Itel A50 rear.jpg"
+    }
+  },
+  {
+    "name": "Redmi 13C",
+    "brand": "Xiaomi",
+    "image": "xiaomi-redmi-13c.jpg",
+    "name_ar": "هاتف Redmi 13C",
+    "credit": {
+      "author": "",
+      "license": "Unsplash License",
+      "source": "https://unsplash.com/license",
+      "title": ""
+    }
+  },
+  {
+    "name": "Redmi Note 13",
+    "brand": "Xiaomi",
+    "image": "xiaomi-redmi-note-13.jpg",
+    "name_ar": "هاتف Redmi Note 13",
+    "credit": {
+      "author": "Maksdroider",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Redmi_Note_11_front.jpg",
+      "title": "File:Redmi Note 11 front.jpg"
+    }
+  },
+  {
+    "name": "Note 40",
+    "brand": "Infinix",
+    "image": "infinix-note-40.jpg",
+    "name_ar": "هاتف Infinix Note 40",
+    "credit": {
+      "author": "ThePremiumBoy",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Infinix_Smart_4_Plus.jpg",
+      "title": "File:Infinix Smart 4 Plus.jpg"
+    }
+  },
+  {
+    "name": "Hot 40i",
+    "brand": "Infinix",
+    "image": "infinix-hot-40i.jpg",
+    "name_ar": "هاتف Infinix Hot 40i",
+    "credit": {
+      "author": "MobilGalantsuper1999PS",
+      "license": "CC BY 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Infinix_Hot_60_pro_Dengan_casing_garis-garis_Normal.jpg",
+      "title": "File:Infinix Hot 60 pro Dengan casing garis-garis Normal.jpg"
+    }
+  },
+  {
+    "name": "Camon 30",
+    "brand": "Tecno",
+    "image": "tecno-camon-30.jpg",
+    "name_ar": "هاتف Tecno Camon 30",
+    "credit": {
+      "author": "TECHNICAL RAJU GURU",
+      "license": "CC BY 3.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Camon_12_Air_back.jpg",
+      "title": "File:Camon 12 Air back.jpg"
+    }
+  },
+  {
+    "name": "Spark 20",
+    "brand": "Tecno",
+    "image": "tecno-spark-20.jpg",
+    "name_ar": "هاتف Tecno Spark 20",
+    "credit": {
+      "author": "Tochiprecious",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Tecno_Spark_4_and_Tecno_Camon_15_prizes.jpg",
+      "title": "File:Tecno Spark 4 and Tecno Camon 15 prizes.jpg"
+    }
+  },
+  {
+    "name": "Galaxy A15",
+    "brand": "Samsung",
+    "image": "samsung-galaxy-a15.jpg",
+    "name_ar": "هاتف Galaxy A15",
+    "credit": {
+      "author": "PantheraLeo1359531",
+      "license": "CC BY 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Samsung_Galaxy_A40_und_Samsung_Galaxy_A15_20240529_HOF7494_RAW-Export_cens_(cropped).png",
+      "title": "File:Samsung Galaxy A40 und Samsung Galaxy A15 20240529 HOF7494 RAW-Export cens (cropped).png"
+    }
+  },
+  {
+    "name": "Galaxy A25",
+    "brand": "Samsung",
+    "image": "samsung-galaxy-a25.jpg",
+    "name_ar": "هاتف Galaxy A25",
+    "credit": {
+      "author": "Captainmorlypogi1959",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Samsung_Galaxy_A25_5G_2024_(cropped).jpg",
+      "title": "File:Samsung Galaxy A25 5G 2024 (cropped).jpg"
+    }
+  },
+  {
+    "name": "Galaxy A55",
+    "brand": "Samsung",
+    "image": "samsung-galaxy-a55.jpg",
+    "name_ar": "هاتف Galaxy A55",
+    "credit": {
+      "author": "PantheraLeo1359531",
+      "license": "CC BY 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Samsung_Galaxy_A34_5G_20231122_HOF01948-HDR_RAW-Export_cens.png",
+      "title": "File:Samsung Galaxy A34 5G 20231122 HOF01948-HDR RAW-Export cens.png"
+    }
+  },
+  {
+    "name": "Galaxy S24",
+    "brand": "Samsung",
+    "image": "samsung-galaxy-s24.jpg",
+    "name_ar": "هاتف Galaxy S24",
+    "credit": {
+      "author": "webtekno",
+      "license": "CC BY 3.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Samsung_Galaxy_S24_(webtekno)_008.png",
+      "title": "File:Samsung Galaxy S24 (webtekno) 008.png"
+    }
+  },
+  {
+    "name": "iPhone 13",
+    "brand": "Apple",
+    "image": "apple-iphone-13.jpg",
+    "name_ar": "هاتف iPhone 13",
+    "credit": {
+      "author": "yto",
+      "license": "CC BY 2.0",
+      "source": "https://www.flickr.com/photos/27983255@N00/52344937813",
+      "title": "iPhone 13"
+    }
+  },
+  {
+    "name": "iPhone 14",
+    "brand": "Apple",
+    "image": "apple-iphone-14.jpg",
+    "name_ar": "هاتف iPhone 14",
+    "credit": {
+      "author": "yto",
+      "license": "CC BY 2.0",
+      "source": "https://www.flickr.com/photos/27983255@N00/52344744061",
+      "title": "iPhone 14 Pro"
+    }
+  },
+  {
+    "name": "iPhone 15",
+    "brand": "Apple",
+    "image": "apple-iphone-15.jpg",
+    "name_ar": "هاتف iPhone 15",
+    "credit": {
+      "author": "IPHONE 15",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:IPhone_15_6.1%22.jpg",
+      "title": "File:IPhone 15 6.1\".jpg"
+    }
+  }
+]

@@ -29,6 +29,7 @@ from apps.stores.roles import Perm
 
 from . import meysara, selectors, services
 from .models import Order, StoreOrder
+from .search import ShopSearchFilter
 from .serializers import (
     AcceptSerializer,
     CartSerializer,
@@ -113,9 +114,10 @@ class ShopProductViewSet(PublicMixin, MarketplaceReadMixin, viewsets.ReadOnlyMod
     filterset_class = ShopProductFilter
     filter_backends = [
         django_filters.rest_framework.DjangoFilterBackend,
-        filters.SearchFilter,
+        ShopSearchFilter,
         filters.OrderingFilter,
     ]
+    # Documented by ShopSearchFilter (accents and synonyms); kept for the schema.
     search_fields = ["name", "name_ar", "brand__name", "category__name", "variants__barcode"]
     ordering_fields = ["price", "created_at", "name"]
     ordering = ["-created_at"]
@@ -145,7 +147,7 @@ class ShopProductViewSet(PublicMixin, MarketplaceReadMixin, viewsets.ReadOnlyMod
         brand_base = ShopProductFilter(
             without_brand, queryset=self.get_queryset(), request=request
         ).qs
-        brand_base = filters.SearchFilter().filter_queryset(request, brand_base, self)
+        brand_base = ShopSearchFilter().filter_queryset(request, brand_base, self)
         ids = Product.objects.filter(pk__in=brand_base.values("pk"), brand__isnull=False)
         brands = (
             ids.values("brand__slug", "brand__name")

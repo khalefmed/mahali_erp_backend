@@ -50,6 +50,7 @@ class PricedLine:
     unit_price: int | None
     max_quantity: Decimal
     description: str = ""
+    image_url: str = ""
 
     @property
     def available(self) -> bool:
@@ -112,6 +113,7 @@ def price_lines(lines: list[dict], *, strict: bool) -> tuple[list[PricedLine], i
                     else None,
                     max_quantity=selectors.largest_stock(variant.id),
                     description=_description(variant),
+                    image_url=variant.product.image_url,
                 )
             )
     total = sum(line.line_total or 0 for line in priced)

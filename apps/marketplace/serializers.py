@@ -127,6 +127,7 @@ class CartSerializer(serializers.Serializer):
 class QuoteLineSerializer(serializers.Serializer):
     variant = serializers.UUIDField(source="variant_id")
     description = serializers.CharField()
+    image_url = serializers.CharField(help_text="Product photo, or empty")
     quantity = serializers.DecimalField(max_digits=12, decimal_places=3)
     available = serializers.BooleanField()
     max_quantity = serializers.DecimalField(max_digits=12, decimal_places=3)

@@ -78,6 +78,21 @@ def test_filters_and_price_bounds(two_shops):
     assert APIClient().get(f"{PUBLIC}/products", {"trade": "pharmacie"}).data["count"] == 0
 
 
+def test_search_ignores_accents_and_knows_everyday_words(two_shops):
+    def names(query):
+        listing = APIClient().get(f"{PUBLIC}/products", {"search": query}).data["results"]
+        return sorted(p["name"] for p in listing)
+
+    assert names("ecouteurs") == ["Écouteurs filaires"]  # no accent typed
+    assert names("ÉCOUTEUR") == ["Écouteurs filaires"]  # plural, capitals
+    assert names("telephone samsung") == ["Galaxy A55"]  # synonym AND brand
+    assert names("portable") == ["Galaxy A55"]
+    assert names("880000000002") == ["Écouteurs filaires"]  # barcode
+    assert names("frigo") == []
+    facets = APIClient().get(f"{PUBLIC}/products/facets", {"search": "telephone"}).data
+    assert facets["count"] == 1
+
+
 def test_quote_marks_unavailable_lines(two_shops, phone_variant, earbuds_variant):
     response = APIClient().post(
         f"{PUBLIC}/cart/quote",
