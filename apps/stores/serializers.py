@@ -9,8 +9,9 @@ from .models import (
     OwnershipTransfer,
     Store,
     StoreDocument,
+    Trade,
 )
-from .roles import INVITABLE_ROLES, ROLE_PERMISSIONS
+from .roles import INVITABLE_ROLES, ROLE_PERMISSIONS, Role
 
 
 class StoreSerializer(serializers.ModelSerializer):
@@ -179,3 +180,59 @@ class OwnershipTransferSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = ["id", "store", "accepted_at", "created_at"]
+
+
+# ---------------------------------------------------------------- store preferences
+
+
+class PaymentSettingsSerializer(serializers.Serializer):
+    """Payment methods offered at the till."""
+
+    cash = serializers.BooleanField(source="accept_cash", required=False)
+    mobile_money = serializers.BooleanField(source="accept_mobile_money", required=False)
+    bank_transfer = serializers.BooleanField(source="accept_bank_transfer", required=False)
+    customer_credit = serializers.BooleanField(source="accept_customer_credit", required=False)
+
+
+class CreditPolicySerializer(serializers.Serializer):
+    block_after_days = serializers.IntegerField(
+        source="credit_block_after_days", allow_null=True, required=False, min_value=1
+    )
+    guarantor_above = serializers.IntegerField(
+        source="credit_guarantor_above", allow_null=True, required=False, min_value=0
+    )
+    deposit_deducted = serializers.BooleanField(source="credit_deposit_deducted", required=False)
+
+
+class ReminderSettingsSerializer(serializers.Serializer):
+    before_due = serializers.BooleanField(source="remind_before_due", required=False)
+    before_due_days = serializers.IntegerField(source="remind_before_due_days", read_only=True)
+    overdue_weekly = serializers.BooleanField(source="remind_overdue_weekly", required=False)
+
+
+class StoreSetupSerializer(serializers.Serializer):
+    trades = serializers.ListField(child=serializers.ChoiceField(choices=Trade.choices))
+    modules = serializers.ListField(child=serializers.CharField())
+    blank = serializers.BooleanField()
+    completed_at = serializers.DateTimeField(allow_null=True)
+
+
+class StoreSetupPatchSerializer(serializers.Serializer):
+    blank = serializers.BooleanField(required=False)
+    completed = serializers.BooleanField(required=False)
+
+
+class RolePolicySerializer(serializers.Serializer):
+    role = serializers.ChoiceField(choices=Role.choices, read_only=True)
+    max_discount_percent = serializers.IntegerField(
+        allow_null=True, required=False, min_value=0, max_value=100
+    )
+    credit_limit = serializers.IntegerField(allow_null=True, required=False, min_value=0)
+    void_window_minutes = serializers.IntegerField(allow_null=True, required=False, min_value=0)
+    cash_tolerance = serializers.IntegerField(allow_null=True, required=False, min_value=0)
+    see_other_stores_stock = serializers.BooleanField(required=False)
+    see_daily_takings = serializers.BooleanField(required=False)
+
+
+class RolePolicyListSerializer(serializers.Serializer):
+    results = RolePolicySerializer(many=True)

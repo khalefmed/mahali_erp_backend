@@ -3,6 +3,22 @@
 Every change the web app should know about (new or changed endpoints, fields, error
 codes). Newest first. The full contract is always at `/api/schema/` on each environment.
 
+## 2026-11-16 — ERP web back-office, lot 2 (#36)
+
+Same contracts as the web app's `src/features/*/schemas.ts`:
+- Treasury: `GET stores/{id}/money-accounts` (one account per payment method, `id` = the method
+  code), `GET money-movements?date=` (signed amounts; a transfer gives two rows),
+  `POST money-transfers` (owner; `same_account`). Transfers post a `misc` journal entry.
+- Expenses: `GET|POST recurring-expenses`, `DELETE recurring-expenses/{id}`;
+  `GET expense-budgets` and `PUT expense-budgets {results: [{category, amount}]}` (owner,
+  replaces all). The daily command `post_recurring_expenses` records the due fixed charges;
+  variable bills (`variable_amount`) only move to their next date.
+- Store preferences, `GET` (any member) and `PATCH` (owner): `payment-settings`, `credit-policy`,
+  `reminder-settings` (`before_due_days` read-only), `setup` (`{blank?, completed?}`).
+  Saved only for now: the till doesn't enforce them and no reminder is sent (SMS later).
+- `GET role-policies` (`members.manage`), `PATCH role-policies/{role}` (owner; manager,
+  cashier, seller, stock_keeper, else `invalid_role` 404). Defaults until changed.
+
 ## 2026-11-16 — ERP web back-office, lot 1 (#34)
 
 Routes the web app already calls by hand (`src/features/*/schemas.ts`), same contracts:

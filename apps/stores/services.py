@@ -17,8 +17,10 @@ from .models import (
     Invitation,
     Membership,
     OwnershipTransfer,
+    RolePolicy,
     Store,
     StoreDocument,
+    StoreSettings,
     StoreStatus,
     Trade,
 )
@@ -239,3 +241,62 @@ def accept_ownership_transfer(request, transfer: OwnershipTransfer) -> Store:
         from_user=str(transfer.from_user_id),
     )
     return store
+
+
+# ---------------------------------------------------------------- store preferences
+
+
+def store_settings(store: Store) -> StoreSettings:
+    """The store's preferences (one row, created with the defaults on first read)."""
+    settings_row, _ = StoreSettings.objects.get_or_create(store=store)
+    return settings_row
+
+
+def update_settings(store: Store, **fields) -> StoreSettings:
+    row = store_settings(store)
+    for name, value in fields.items():
+        setattr(row, name, value)
+    row.save()
+    return row
+
+
+POLICY_ROLES = [Role.MANAGER, Role.CASHIER, Role.SELLER, Role.STOCK_KEEPER]
+
+
+def role_policy_defaults(store: Store, role: str) -> dict:
+    """What a role may do when the owner hasn't set anything: managers decide, the
+    till staff stay within the store's discount cap, stock keepers don't sell."""
+    selling = role in (Role.CASHIER, Role.SELLER)
+    return {
+        "max_discount_percent": None
+        if role == Role.MANAGER
+        else (store.max_discount_percent if selling else 0),
+        "credit_limit": None if role == Role.MANAGER else 0,
+        "void_window_minutes": None if role == Role.MANAGER else (30 if selling else 0),
+        "cash_tolerance": 0 if role != Role.STOCK_KEEPER else None,
+        "see_other_stores_stock": role in (Role.MANAGER, Role.STOCK_KEEPER),
+        "see_daily_takings": role == Role.MANAGER,
+    }
+
+
+def role_policies(store: Store) -> list[dict]:
+    saved = {policy.role: policy for policy in RolePolicy.objects.all()}
+    rows = []
+    for role in POLICY_ROLES:
+        values = role_policy_defaults(store, role)
+        if role in saved:
+            values = {name: getattr(saved[role], name) for name in values}
+        rows.append({"role": role, **values})
+    return rows
+
+
+def update_role_policy(store: Store, role: str, **fields) -> dict:
+    if role not in POLICY_ROLES:
+        raise ApiError("invalid_role", "No policy for this role.", status_code=404)
+    policy, _ = RolePolicy.objects.get_or_create(
+        store=store, role=role, defaults=role_policy_defaults(store, role)
+    )
+    for name, value in fields.items():
+        setattr(policy, name, value)
+    policy.save()
+    return next(row for row in role_policies(store) if row["role"] == role)
