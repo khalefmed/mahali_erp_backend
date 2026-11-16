@@ -3,13 +3,19 @@
 Who may pay in instalments, and how much, is decided here, never by the apps:
 
 1. at least `meysara_required_orders` (3) orders delivered and paid;
-2. no instalment more than `LATE_DAYS` (7) days late;
-3. one plan at a time;
-4. order total ≥ `meysara_min_total` (3 000 MRU);
-5. financed share ≤ `meysara_max_financed` (60 000 MRU).
+2. identity verified by e-KYC (`apps.marketplace.kyc`, BCM Instruction n°13/GR/2025, art. 10);
+3. no instalment more than `LATE_DAYS` (7) days late;
+4. one plan at a time;
+5. order total ≥ `meysara_min_total` (3 000 MRU);
+6. financed share ≤ `meysara_max_financed`, itself never above the BCM ceiling.
 
 The first failing rule is the reason. Ceiling: 50 % (choices 25/50), then 100 % (50/100)
-once the latest plan was paid off without an instalment more than 7 days late.
+once the latest plan was paid off without an instalment more than 7 days late. A share whose
+financed amount would pass the ceiling is not offered.
+
+BCM ceilings for a private person (Instruction n°13/GR/2025, art. 25): 60 000 MRU over 12
+months at most. With one plan at a time, the financed share is also the shopper's whole
+Meysara debt (art. 16: ceiling on cumulative debt).
 
 Amounts are whole MRU: financed = floor(total * percent / 100), the rest is paid on delivery;
 instalment = floor(financed / 4) and the remainder goes to the first instalments. They
@@ -25,6 +31,7 @@ from django.utils import timezone
 from apps.console.models import PlatformSettings
 from apps.core.exceptions import ApiError, Conflict
 
+from . import kyc
 from .models import (
     MeysaraInstalment,
     MeysaraPlan,
@@ -38,16 +45,27 @@ INTERVAL_DAYS = 14
 LATE_DAYS = 7
 OPEN_PLANS = {MeysaraPlanStatus.RESERVED, MeysaraPlanStatus.ACTIVE}
 
+# BCM Instruction n°13/GR/2025, art. 25: BNPL ceilings for a private person.
+BCM_MAX_FINANCED = 60_000
+BCM_MAX_DAYS = 365
+if INSTALMENTS * INTERVAL_DAYS > BCM_MAX_DAYS:  # pragma: no cover
+    raise RuntimeError("A Meysara plan must end within 12 months (BCM art. 25).")
+
+
+def max_financed(settings: PlatformSettings) -> int:
+    return min(settings.meysara_max_financed, BCM_MAX_FINANCED)
+
 
 class Reason:
     DISABLED = "meysara_disabled"
     HISTORY = "meysara_history_insufficient"
+    IDENTITY = "meysara_identity_unverified"
     OVERDUE = "meysara_overdue"
     PLAN_IN_PROGRESS = "meysara_plan_in_progress"
     AMOUNT_TOO_LOW = "meysara_amount_too_low"
     LIMIT_EXCEEDED = "meysara_limit_exceeded"
 
-    ALL = [DISABLED, HISTORY, OVERDUE, PLAN_IN_PROGRESS, AMOUNT_TOO_LOW, LIMIT_EXCEEDED]
+    ALL = [DISABLED, HISTORY, IDENTITY, OVERDUE, PLAN_IN_PROGRESS, AMOUNT_TOO_LOW, LIMIT_EXCEEDED]
 
 
 @dataclass
@@ -60,6 +78,8 @@ class Offer:
     required_orders: int = 0
     min_total: int = 0
     max_financed: int = 0
+    identity_verified: bool = False
+    regulatory_max_financed: int = BCM_MAX_FINANCED
 
 
 def financed(total: int, percent: int) -> int:
@@ -114,10 +134,12 @@ def max_percent(customer) -> int:
 def offer(customer, total: int, today: date | None = None) -> Offer:
     today = today or timezone.localdate()
     settings = PlatformSettings.load()
+    ceiling_mru = max_financed(settings)
     base = {
         "required_orders": settings.meysara_required_orders,
         "min_total": settings.meysara_min_total,
-        "max_financed": settings.meysara_max_financed,
+        "max_financed": ceiling_mru,
+        "identity_verified": kyc.is_verified(customer),
     }
 
     def no(reason: str, paid: int = 0) -> Offer:
@@ -128,6 +150,8 @@ def offer(customer, total: int, today: date | None = None) -> Offer:
     paid = paid_orders(customer)
     if paid < settings.meysara_required_orders:
         return no(Reason.HISTORY, paid)
+    if not base["identity_verified"]:
+        return no(Reason.IDENTITY, paid)
     if is_overdue(customer, today):
         return no(Reason.OVERDUE, paid)
     if MeysaraPlan.objects.filter(customer=customer, status__in=OPEN_PLANS).exists():
@@ -136,7 +160,8 @@ def offer(customer, total: int, today: date | None = None) -> Offer:
         return no(Reason.AMOUNT_TOO_LOW, paid)
     ceiling = max_percent(customer)
     choices = [50, 100] if ceiling == 100 else [25, 50]
-    if financed(total, choices[0]) > settings.meysara_max_financed:
+    choices = [p for p in choices if financed(total, p) <= ceiling_mru]
+    if not choices:
         return no(Reason.LIMIT_EXCEEDED, paid)
     return Offer(True, None, ceiling, choices, paid_orders=paid, **base)
 

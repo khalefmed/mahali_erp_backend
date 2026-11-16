@@ -61,7 +61,11 @@ class PlatformSettings(models.Model):
         default=3000, help_text="MRU, smallest order that can use Meysara"
     )
     meysara_max_financed = models.PositiveIntegerField(
-        default=60000, help_text="MRU, largest share paid in instalments"
+        default=60000,
+        # BCM Instruction n°13/GR/2025, art. 25: 60 000 MRU per private person
+        # (also enforced in apps.marketplace.meysara.BCM_MAX_FINANCED).
+        validators=[MaxValueValidator(60000)],
+        help_text="MRU, largest share paid in instalments (BCM ceiling: 60 000)",
     )
     updated_at = models.DateTimeField(auto_now=True)
 

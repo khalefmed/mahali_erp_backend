@@ -103,11 +103,21 @@ the MRU. Payment on delivery.
 - **Meysara (pay in 4, no fees):** `GET marketplace/meysara/offer?total=` says whether the
   shopper may pay part of this order in 4 instalments and which shares (`choices`): opens
   after 3 delivered and paid orders, up to 50 %, then 100 % once a plan was paid on time;
-  closed while a plan runs or an instalment is more than 7 days late; total ≥ 3 000 MRU,
-  financed ≤ 60 000 MRU (settings in `console/settings`). Order with
+  closed until the shopper's identity is verified (e-KYC below), while a plan runs or an
+  instalment is more than 7 days late; total ≥ 3 000 MRU, financed ≤ 60 000 MRU (settings in
+  `console/settings`, never above the BCM ceiling of 60 000 MRU over 12 months, Instruction
+  n°13/GR/2025 art. 25; a share above it is left out of `choices`). Order with
   `payment_method: "meysara", meysara_percent`. The rest is paid on delivery; instalments
   fall due every 14 days from delivery. The order's `meysara` block has the schedule; the
   Mahali team records payments (`console/marketplace/orders/{id}/meysara/pay`).
+- **Identity (e-KYC, before Meysara):** `GET marketplace/identity`, then
+  `POST marketplace/identity {nni, first_name, last_name, birth_date, phone, consent}` (sends
+  a code to the phone), `POST marketplace/identity/phone/verify {code}` (or `…/phone/resend`),
+  `POST marketplace/identity/documents` (multipart `id_front`, `selfie`; the photos are checked,
+  not kept). `identity.status`: `phone_pending` → `documents_pending` → `verified` or
+  `rejected`. NNI and phone come back masked. The provider is **simulated** for now
+  (`identity.simulation`): `simulation_code` carries the SMS code, and NNIs starting with `000`
+  are rejected.
 - **Shopper password reset:** `marketplace/auth/password/forgot` (link to the
   marketplace), then the shared `auth/password/reset`.
 - **Store side (ERP):** `GET stores/{id}/marketplace-orders` — the store's part at its

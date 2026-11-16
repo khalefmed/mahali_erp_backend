@@ -15,7 +15,7 @@ from apps.marketplace import meysara
 from apps.marketplace.models import MeysaraInstalment, MeysaraPlan, Order
 from conftest import api, make_user
 
-from .helpers import PUBLIC, order_payload, store_client
+from .helpers import PUBLIC, order_payload, store_client, verify_identity
 
 pytestmark = pytest.mark.django_db
 CONSOLE = "/api/v1/console/marketplace/orders"
@@ -29,6 +29,12 @@ def rules(margin):
     settings.meysara_max_financed = 60000
     settings.save()
     return settings
+
+
+def ready(user):
+    """Three delivered orders and a verified identity: Meysara is open."""
+    past_orders(user, 3)
+    verify_identity(user)
 
 
 def past_orders(user, count, status="delivered"):
@@ -95,19 +101,24 @@ def test_offer_opens_after_three_delivered_orders(rules, shopper):
         "required_orders": 3,
         "min_total": None,
         "max_financed": 60000,
+        "identity_verified": False,
+        "regulatory_max_financed": 60000,
     }
     past_orders(user, 2)
     past_orders(user, 1, status="cancelled")  # cancelled orders don't count
     assert offer(client, 5000).data["paid_orders"] == 2
 
     past_orders(user, 1)
+    assert offer(client, 5000).data["reason"] == "meysara_identity_unverified"
+
+    verify_identity(user)
     opened = offer(client, 5000).data
     assert (opened["eligible"], opened["max_percent"], opened["choices"]) == (True, 50, [25, 50])
 
 
 def test_offer_reasons_in_the_spec_order(rules, shopper):
     user, client = shopper
-    past_orders(user, 3)
+    ready(user)
     assert offer(client, 999).data["reason"] == "meysara_amount_too_low"
     rules.meysara_max_financed = 1000
     rules.save()
@@ -127,7 +138,7 @@ def test_offer_needs_a_shopper_token(rules, owner_client):
 
 def test_meysara_order_reserves_a_plan(rules, two_shops, shopper, earbuds_variant):
     user, client = shopper
-    past_orders(user, 3)
+    ready(user)
     response = meysara_order(client, earbuds_variant)  # 5 x 275 = 1 375
     assert response.status_code == 201, response.data
     assert response.data["payment_method"] == "meysara"
@@ -160,7 +171,7 @@ def test_meysara_needs_an_allowed_share(rules, two_shops, shopper, earbuds_varia
 
     refused = meysara_order(client, earbuds_variant)  # no history yet
     assert refused.data["reason"] == "meysara_history_insufficient"
-    past_orders(user, 3)
+    ready(user)
     too_much = meysara_order(client, earbuds_variant, percent=100)  # ceiling is 50 %
     assert (too_much.data["code"], too_much.data["choices"]) == ("meysara_not_allowed", [25, 50])
     assert not MeysaraPlan.objects.exists()
@@ -178,7 +189,7 @@ def test_cash_orders_are_unchanged(two_shops, shopper, earbuds_variant):
 
 def test_cancelling_the_order_cancels_the_plan(rules, two_shops, shopper, earbuds_variant):
     user, client = shopper
-    past_orders(user, 3)
+    ready(user)
     order = meysara_order(client, earbuds_variant).data
     cancelled = client.post(f"{PUBLIC}/orders/{order['id']}/cancel")
     assert cancelled.data["meysara"]["status"] == "cancelled"
@@ -192,7 +203,7 @@ def test_delivery_starts_the_schedule_and_mahali_records_payments(
     rules, two_shops, shopper, staff_client, earbuds_variant
 ):
     user, client = shopper
-    past_orders(user, 3)
+    ready(user)
     order = meysara_order(client, earbuds_variant).data
     early = staff_client.post(
         f"{CONSOLE}/{order['id']}/meysara/pay", {"number": 1, "via": "bankily"}, format="json"
@@ -234,7 +245,7 @@ def test_an_instalment_more_than_7_days_late_closes_meysara(
     rules, two_shops, shopper, staff_client, earbuds_variant
 ):
     user, client = shopper
-    past_orders(user, 3)
+    ready(user)
     order = meysara_order(client, earbuds_variant).data
     deliver(order["id"], two_shops["dear"], staff_client)
     MeysaraInstalment.objects.filter(number=1).update(
@@ -252,7 +263,7 @@ def test_late_payment_keeps_the_ceiling_at_50(
     rules, two_shops, shopper, staff_client, earbuds_variant
 ):
     user, client = shopper
-    past_orders(user, 3)
+    ready(user)
     order = meysara_order(client, earbuds_variant).data
     deliver(order["id"], two_shops["dear"], staff_client)
     for number in (1, 2, 3, 4):

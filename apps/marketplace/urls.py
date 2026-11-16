@@ -21,6 +21,10 @@ urlpatterns = [
     path("marketplace/auth/logout", views.CustomerLogoutView.as_view()),
     path("marketplace/auth/password/forgot", views.CustomerPasswordForgotView.as_view()),
     path("marketplace/meysara/offer", views.MeysaraOfferView.as_view()),
+    path("marketplace/identity", views.IdentityView.as_view()),
+    path("marketplace/identity/phone/resend", views.IdentityResendView.as_view()),
+    path("marketplace/identity/phone/verify", views.IdentityVerifyPhoneView.as_view()),
+    path("marketplace/identity/documents", views.IdentityDocumentsView.as_view()),
     path("marketplace/me", views.CustomerMeView.as_view()),
     *router.urls,
 ]

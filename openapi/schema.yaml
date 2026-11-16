@@ -108,11 +108,21 @@ info:
     - **Meysara (pay in 4, no fees):** `GET marketplace/meysara/offer?total=` says whether the
       shopper may pay part of this order in 4 instalments and which shares (`choices`): opens
       after 3 delivered and paid orders, up to 50 %, then 100 % once a plan was paid on time;
-      closed while a plan runs or an instalment is more than 7 days late; total ≥ 3 000 MRU,
-      financed ≤ 60 000 MRU (settings in `console/settings`). Order with
+      closed until the shopper's identity is verified (e-KYC below), while a plan runs or an
+      instalment is more than 7 days late; total ≥ 3 000 MRU, financed ≤ 60 000 MRU (settings in
+      `console/settings`, never above the BCM ceiling of 60 000 MRU over 12 months, Instruction
+      n°13/GR/2025 art. 25; a share above it is left out of `choices`). Order with
       `payment_method: "meysara", meysara_percent`. The rest is paid on delivery; instalments
       fall due every 14 days from delivery. The order's `meysara` block has the schedule; the
       Mahali team records payments (`console/marketplace/orders/{id}/meysara/pay`).
+    - **Identity (e-KYC, before Meysara):** `GET marketplace/identity`, then
+      `POST marketplace/identity {nni, first_name, last_name, birth_date, phone, consent}` (sends
+      a code to the phone), `POST marketplace/identity/phone/verify {code}` (or `…/phone/resend`),
+      `POST marketplace/identity/documents` (multipart `id_front`, `selfie`; the photos are checked,
+      not kept). `identity.status`: `phone_pending` → `documents_pending` → `verified` or
+      `rejected`. NNI and phone come back masked. The provider is **simulated** for now
+      (`identity.simulation`): `simulation_code` carries the SMS code, and NNIs starting with `000`
+      are rejected.
     - **Shopper password reset:** `marketplace/auth/password/forgot` (link to the
       marketplace), then the shared `auth/password/reset`.
     - **Store side (ERP):** `GET stores/{id}/marketplace-orders` — the store's part at its
@@ -4535,6 +4545,308 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ShopCategory'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/marketplace/identity:
+    get:
+      operationId: marketplace_identity_get
+      description: 'e-KYC required before Meysara (BCM Instruction n°13/GR/2025, chapter
+        II). Steps: `POST marketplace/identity` (details + consent, sends a code to
+        the phone) → `POST marketplace/identity/phone/verify` → `POST marketplace/identity/documents`
+        (ID card + selfie). `identity.status`: `phone_pending` · `documents_pending`
+        · `verified` · `rejected` (start again). The provider is simulated for now:
+        `simulation_code` carries the SMS code, and NNIs starting with `000` are rejected
+        (`reject_reason` `document_unreadable`).'
+      tags:
+      - 'marketplace: identity'
+      security:
+      - customerJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdentityState'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+    post:
+      operationId: marketplace_identity_start
+      description: 'Starts or restarts the check and sends a code to `phone` (10 min,
+        3 attempts; 5 codes per hour). Errors (with `field`): `consent_required`,
+        `invalid_nni`, `invalid_phone`, `underage` (18+); `nni_already_used` (409),
+        `identity_already_verified` (409).'
+      tags:
+      - 'marketplace: identity'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IdentityStartRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/IdentityStartRequest'
+        required: true
+      security:
+      - customerJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdentityState'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/marketplace/identity/documents:
+    post:
+      operationId: marketplace_identity_documents
+      description: 'The provider checks the ID card, matches the face and runs a liveness
+        check; the photos are not kept. Ends in `verified` or `rejected`. Errors (with
+        `field`): `unsupported_file_type`, `file_too_large`; `identity_not_started`,
+        `identity_wrong_step` (409), `nni_already_used` (409).'
+      tags:
+      - 'marketplace: identity'
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/IdentityDocumentsRequest'
+        required: true
+      security:
+      - customerJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdentityState'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/marketplace/identity/phone/resend:
+    post:
+      operationId: marketplace_identity_phone_resend
+      description: 'A new code to the same phone. Errors: `identity_not_started`,
+        `identity_step_done` (409).'
+      tags:
+      - 'marketplace: identity'
+      security:
+      - customerJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdentityState'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/marketplace/identity/phone/verify:
+    post:
+      operationId: marketplace_identity_phone_verify
+      description: 'Errors: `invalid_code` (with `attempts_left`), `code_expired`,
+        `identity_not_started`, `identity_step_done` (409).'
+      tags:
+      - 'marketplace: identity'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IdentityCodeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/IdentityCodeRequest'
+        required: true
+      security:
+      - customerJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdentityState'
           description: ''
         '400':
           content:
@@ -14051,6 +14363,137 @@ components:
         * `weekly` - Weekly
         * `monthly` - Monthly
         * `quarterly` - Quarterly
+    Identity:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/IdentityStatusEnum'
+        nni:
+          type: string
+          description: 'Masked: last 4 digits only'
+          readOnly: true
+        first_name:
+          type: string
+          maxLength: 80
+        last_name:
+          type: string
+          maxLength: 80
+        birth_date:
+          type: string
+          format: date
+        phone:
+          type: string
+          description: 'Masked: last 2 digits only'
+          readOnly: true
+        phone_verified_at:
+          type: string
+          format: date-time
+          nullable: true
+        checks:
+          description: 'Provider results: document, face_match, liveness'
+        reject_reason:
+          type: string
+          maxLength: 40
+        verified_at:
+          type: string
+          format: date-time
+          nullable: true
+        simulation:
+          type: boolean
+          description: True while no real e-KYC provider is plugged in
+          readOnly: true
+      required:
+      - birth_date
+      - first_name
+      - last_name
+      - nni
+      - phone
+      - simulation
+    IdentityCodeRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 6
+          maxLength: 6
+      required:
+      - code
+    IdentityDocumentsRequest:
+      type: object
+      properties:
+        id_front:
+          type: string
+          format: binary
+          description: Photo of the front of the ID card
+        selfie:
+          type: string
+          format: binary
+          description: Selfie taken in the app (liveness check)
+      required:
+      - id_front
+      - selfie
+    IdentityStartRequest:
+      type: object
+      properties:
+        nni:
+          type: string
+          minLength: 1
+          description: 10 digits
+          maxLength: 10
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        last_name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        birth_date:
+          type: string
+          format: date
+        phone:
+          type: string
+          minLength: 1
+          description: +222 and 8 digits
+          maxLength: 16
+        consent:
+          type: boolean
+          description: The shopper agrees to the identity checks and to their data
+            being processed
+      required:
+      - birth_date
+      - consent
+      - first_name
+      - last_name
+      - nni
+      - phone
+    IdentityState:
+      type: object
+      properties:
+        identity:
+          allOf:
+          - $ref: '#/components/schemas/Identity'
+          nullable: true
+          description: Null before the first step
+        simulation_code:
+          type: string
+          nullable: true
+          description: 'Simulated provider only: the code it would have sent by SMS.
+            Shown in the app as a demo hint; absent with a real provider.'
+      required:
+      - identity
+    IdentityStatusEnum:
+      enum:
+      - phone_pending
+      - documents_pending
+      - verified
+      - rejected
+      type: string
+      description: |-
+        * `phone_pending` - Code SMS à saisir
+        * `documents_pending` - Pièce d'identité et selfie à envoyer
+        * `verified` - Identité vérifiée
+        * `rejected` - Refusée
     ImpersonateRequest:
       type: object
       properties:
@@ -14499,6 +14942,7 @@ components:
 
             * `meysara_disabled` - meysara_disabled
             * `meysara_history_insufficient` - meysara_history_insufficient
+            * `meysara_identity_unverified` - meysara_identity_unverified
             * `meysara_overdue` - meysara_overdue
             * `meysara_plan_in_progress` - meysara_plan_in_progress
             * `meysara_amount_too_low` - meysara_amount_too_low
@@ -14524,20 +14968,30 @@ components:
           description: MRU
         max_financed:
           type: integer
-          description: MRU
+          description: MRU, largest share in instalments (never above `regulatory_max_financed`)
+        identity_verified:
+          type: boolean
+          description: e-KYC done (`marketplace/identity`); required before Meysara
+        regulatory_max_financed:
+          type: integer
+          description: MRU, BCM ceiling per private person (Instruction n°13/GR/2025,
+            art. 25)
       required:
       - choices
       - eligible
+      - identity_verified
       - max_financed
       - max_percent
       - min_total
       - paid_orders
       - reason
+      - regulatory_max_financed
       - required_orders
     MeysaraOfferReasonEnum:
       enum:
       - meysara_disabled
       - meysara_history_insufficient
+      - meysara_identity_unverified
       - meysara_overdue
       - meysara_plan_in_progress
       - meysara_amount_too_low
@@ -14546,6 +15000,7 @@ components:
       description: |-
         * `meysara_disabled` - meysara_disabled
         * `meysara_history_insufficient` - meysara_history_insufficient
+        * `meysara_identity_unverified` - meysara_identity_unverified
         * `meysara_overdue` - meysara_overdue
         * `meysara_plan_in_progress` - meysara_plan_in_progress
         * `meysara_amount_too_low` - meysara_amount_too_low
@@ -15813,9 +16268,9 @@ components:
           description: MRU, smallest order that can use Meysara
         meysara_max_financed:
           type: integer
-          maximum: 2147483647
+          maximum: 60000
           minimum: 0
-          description: MRU, largest share paid in instalments
+          description: 'MRU, largest share paid in instalments (BCM ceiling: 60 000)'
     PatchedReminderSettingsRequest:
       type: object
       properties:
@@ -16137,9 +16592,9 @@ components:
           description: MRU, smallest order that can use Meysara
         meysara_max_financed:
           type: integer
-          maximum: 2147483647
+          maximum: 60000
           minimum: 0
-          description: MRU, largest share paid in instalments
+          description: 'MRU, largest share paid in instalments (BCM ceiling: 60 000)'
         updated_at:
           type: string
           format: date-time

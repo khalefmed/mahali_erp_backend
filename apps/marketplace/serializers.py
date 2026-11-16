@@ -5,6 +5,7 @@ from apps.catalog.models import Brand, Category, Product, Variant
 
 from . import meysara
 from .models import (
+    IdentityVerification,
     InstalmentMethod,
     MeysaraInstalment,
     MeysaraPlan,
@@ -172,7 +173,15 @@ class MeysaraOfferSerializer(serializers.Serializer):
     paid_orders = serializers.IntegerField(help_text="Delivered and paid orders so far")
     required_orders = serializers.IntegerField()
     min_total = serializers.IntegerField(help_text="MRU")
-    max_financed = serializers.IntegerField(help_text="MRU")
+    max_financed = serializers.IntegerField(
+        help_text="MRU, largest share in instalments (never above `regulatory_max_financed`)"
+    )
+    identity_verified = serializers.BooleanField(
+        help_text="e-KYC done (`marketplace/identity`); required before Meysara"
+    )
+    regulatory_max_financed = serializers.IntegerField(
+        help_text="MRU, BCM ceiling per private person (Instruction n°13/GR/2025, art. 25)"
+    )
 
 
 class MeysaraInstalmentSerializer(serializers.ModelSerializer):
@@ -340,3 +349,70 @@ class ConsoleOrderSerializer(OrderSerializer):
 
     class Meta(OrderSerializer.Meta):
         fields = [*OrderSerializer.Meta.fields, "customer", "margin_percent", "store_orders"]
+
+
+# ---------------------------------------------------------------- e-KYC
+
+
+class IdentityStartSerializer(serializers.Serializer):
+    nni = serializers.CharField(max_length=10, help_text="10 digits")
+    first_name = serializers.CharField(max_length=80)
+    last_name = serializers.CharField(max_length=80)
+    birth_date = serializers.DateField()
+    phone = serializers.CharField(max_length=16, help_text="+222 and 8 digits")
+    consent = serializers.BooleanField(
+        help_text="The shopper agrees to the identity checks and to their data being processed"
+    )
+
+
+class IdentityCodeSerializer(serializers.Serializer):
+    code = serializers.CharField(min_length=6, max_length=6)
+
+
+class IdentityDocumentsSerializer(serializers.Serializer):
+    id_front = serializers.FileField(help_text="Photo of the front of the ID card")
+    selfie = serializers.FileField(help_text="Selfie taken in the app (liveness check)")
+
+
+class IdentitySerializer(serializers.ModelSerializer):
+    nni = serializers.SerializerMethodField()
+    phone = serializers.SerializerMethodField()
+    simulation = serializers.SerializerMethodField()
+
+    class Meta:
+        model = IdentityVerification
+        fields = [
+            "status",
+            "nni",
+            "first_name",
+            "last_name",
+            "birth_date",
+            "phone",
+            "phone_verified_at",
+            "checks",
+            "reject_reason",
+            "verified_at",
+            "simulation",
+        ]
+
+    def get_nni(self, obj) -> str:
+        """Masked: last 4 digits only"""
+        return f"••••••{obj.nni[-4:]}"
+
+    def get_phone(self, obj) -> str:
+        """Masked: last 2 digits only"""
+        return f"{obj.phone[:4]} •• •• •• {obj.phone[-2:]}"
+
+    def get_simulation(self, obj) -> bool:
+        """True while no real e-KYC provider is plugged in"""
+        return obj.provider == "simulated"
+
+
+class IdentityStateSerializer(serializers.Serializer):
+    identity = IdentitySerializer(allow_null=True, help_text="Null before the first step")
+    simulation_code = serializers.CharField(
+        allow_null=True,
+        required=False,
+        help_text="Simulated provider only: the code it would have sent by SMS. Shown in the "
+        "app as a demo hint; absent with a real provider.",
+    )
