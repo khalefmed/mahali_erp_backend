@@ -772,7 +772,9 @@ class Command(BaseCommand):
             decided_at=now - timedelta(days=9),
         )
         Membership.objects.create(store=store, user=owner, role=Role.OWNER)
-        rng = random.Random(f"{trade}-{store.id}")  # noqa: S311  # nosec B311
+        # Seeded by trade only: same data on every run (the store id is random,
+        # which made the decimal "au mètre" sale appear only sometimes, #28).
+        rng = random.Random(f"seed-trades-{trade}")  # noqa: S311  # nosec B311
         request = SimpleNamespace(
             store=store,
             user=owner,
