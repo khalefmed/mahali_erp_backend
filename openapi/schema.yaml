@@ -13609,8 +13609,25 @@ components:
         review_sla_hours:
           type: integer
           description: Promised review time for new stores
+        meysara_enabled:
+          type: boolean
+          description: Meysara (pay in 4) is offered
+        meysara_min_total:
+          type: integer
+          description: MRU, smallest order that can use Meysara (hide the 4-instalment
+            teaser below)
+        meysara_max_financed:
+          type: integer
+          description: MRU, largest share paid in instalments
+        meysara_required_orders:
+          type: integer
+          description: Delivered and paid orders before Meysara opens
       required:
       - announcement
+      - meysara_enabled
+      - meysara_max_financed
+      - meysara_min_total
+      - meysara_required_orders
       - review_sla_hours
       - signups_open
     PlatformSettings:
@@ -13817,6 +13834,9 @@ components:
           format: uuid
         description:
           type: string
+        image_url:
+          type: string
+          description: Product photo, or empty
         quantity:
           type: string
           format: decimal
@@ -13836,6 +13856,7 @@ components:
       required:
       - available
       - description
+      - image_url
       - line_total
       - max_quantity
       - quantity

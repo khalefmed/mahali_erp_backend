@@ -3,6 +3,16 @@
 Every change the web app should know about (new or changed endpoints, fields, error
 codes). Newest first. The full contract is always at `/api/schema/` on each environment.
 
+## 2026-11-16 — Catalog photos and Arabic names; public Meysara rules (#31)
+
+- `GET platform` gains `meysara_enabled`, `meysara_min_total`, `meysara_max_financed`,
+  `meysara_required_orders`: show « ou 4 × … » only when Meysara is on and the amount is at
+  least `meysara_min_total`. Eligibility itself still comes from `marketplace/meysara/offer`.
+- `POST marketplace/cart/quote`: each line gains `image_url` (the product photo, or empty) for
+  the cart and mini-cart thumbnails.
+- Every catalog product now has `image_url` (square 1200 px JPEG under
+  `/static/catalog/products/`) and `name_ar`. No schema change.
+
 ## 2026-11-15 — Marketplace v2: Meysara, facets, shoppers' reset link (#27)
 
 - **Meysara** (pay in 4, no fees): `GET marketplace/meysara/offer?total=` → `eligible`,

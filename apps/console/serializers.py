@@ -218,3 +218,13 @@ class PlatformInfoSerializer(serializers.Serializer):
     announcement = serializers.CharField(help_text="Banner to show to every merchant, or empty")
     signups_open = serializers.BooleanField()
     review_sla_hours = serializers.IntegerField(help_text="Promised review time for new stores")
+    meysara_enabled = serializers.BooleanField(help_text="Meysara (pay in 4) is offered")
+    meysara_min_total = serializers.IntegerField(
+        help_text="MRU, smallest order that can use Meysara (hide the 4-instalment teaser below)"
+    )
+    meysara_max_financed = serializers.IntegerField(
+        help_text="MRU, largest share paid in instalments"
+    )
+    meysara_required_orders = serializers.IntegerField(
+        help_text="Delivered and paid orders before Meysara opens"
+    )

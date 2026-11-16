@@ -13,6 +13,10 @@ def test_platform_info_is_public_and_reflects_console(staff_client):
         "announcement": "Maintenance ce soir 22 h",
         "signups_open": True,
         "review_sla_hours": 24,
+        "meysara_enabled": True,
+        "meysara_min_total": 3000,
+        "meysara_max_financed": 60000,
+        "meysara_required_orders": 3,
     }
 
 
