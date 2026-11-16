@@ -45,3 +45,24 @@ def order_payload(*lines):
 
 def store_client(store):
     return client_for(store.owner)
+
+
+def verify_identity(user, nni="2012345678"):
+    """A shopper whose e-KYC is done (what the three identity steps end with)."""
+    from django.utils import timezone
+
+    from apps.marketplace.models import IdentityStatus, IdentityVerification
+
+    return IdentityVerification.objects.create(
+        customer=user,
+        status=IdentityStatus.VERIFIED,
+        nni=nni,
+        first_name="Aicha",
+        last_name="Mint Ahmed",
+        birth_date="1995-03-14",
+        phone="+22236000000",
+        consent_at=timezone.now(),
+        phone_verified_at=timezone.now(),
+        provider="simulated",
+        verified_at=timezone.now(),
+    )

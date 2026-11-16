@@ -3,6 +3,24 @@
 Every change the web app should know about (new or changed endpoints, fields, error
 codes). Newest first. The full contract is always at `/api/schema/` on each environment.
 
+## 2026-11-16 — Meysara: e-KYC (simulated) and BCM ceilings (Instruction n°13/GR/2025)
+
+- New `marketplace: identity` routes (customer tokens): `GET marketplace/identity`,
+  `POST marketplace/identity` (details + `consent`), `POST marketplace/identity/phone/verify`,
+  `POST marketplace/identity/phone/resend`, `POST marketplace/identity/documents` (multipart).
+  Responses: `{identity, simulation_code}`. Errors: `consent_required`, `invalid_nni`,
+  `invalid_phone`, `underage`, `nni_already_used` (409), `identity_already_verified` (409),
+  `invalid_code` (`attempts_left`), `code_expired`, `identity_not_started`,
+  `identity_step_done` (409), `identity_wrong_step` (409), `unsupported_file_type`,
+  `file_too_large`. Codes sent: 5 per hour per shopper (429).
+- The provider is simulated: `simulation_code` is the code it would send by SMS (show it as a
+  demo hint), NNIs starting with `000` end `rejected` (`reject_reason: document_unreadable`).
+- `GET marketplace/meysara/offer`: new reason `meysara_identity_unverified` (after
+  `meysara_history_insufficient`), new fields `identity_verified` and
+  `regulatory_max_financed` (60 000). `choices` now leaves out a share whose financed amount
+  would pass `max_financed` (before, 100 % could be chosen above the ceiling).
+- `console/settings`: `meysara_max_financed` above 60 000 is refused (400).
+
 ## 2026-11-16 — ERP web back-office, lot 2 (#36)
 
 Same contracts as the web app's `src/features/*/schemas.ts`:

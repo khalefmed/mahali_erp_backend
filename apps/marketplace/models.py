@@ -182,3 +182,59 @@ class OrderSequence(models.Model):
 
     series = models.CharField(max_length=20, unique=True)
     last_value = models.PositiveIntegerField(default=0)
+
+
+class IdentityStatus(models.TextChoices):
+    PHONE_PENDING = "phone_pending", "Code SMS à saisir"
+    DOCUMENTS_PENDING = "documents_pending", "Pièce d'identité et selfie à envoyer"
+    VERIFIED = "verified", "Identité vérifiée"
+    REJECTED = "rejected", "Refusée"
+
+
+class IdentityVerification(BaseModel):
+    """A shopper's e-KYC (BCM Instruction n°13/GR/2025, chapter II), required before Meysara.
+
+    Three steps: identity details + consent, phone ownership (one-time code), then the ID
+    card and a selfie checked by the provider (document, face match, liveness). The images
+    are checked and dropped, never stored. Rules: `apps.marketplace.kyc`."""
+
+    customer = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="identity_verification"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=IdentityStatus.choices,
+        default=IdentityStatus.PHONE_PENDING,
+        db_index=True,
+    )
+    nni = models.CharField(max_length=10, help_text="Numéro national d'identification")
+    first_name = models.CharField(max_length=80)
+    last_name = models.CharField(max_length=80)
+    birth_date = models.DateField()
+    phone = models.CharField(max_length=16, help_text="+222 and 8 digits")
+    consent_at = models.DateTimeField(help_text="Explicit consent to the identity checks")
+    otp_hash = models.CharField(max_length=128, blank=True)
+    otp_expires_at = models.DateTimeField(null=True, blank=True)
+    otp_attempts = models.PositiveSmallIntegerField(default=0)
+    phone_verified_at = models.DateTimeField(null=True, blank=True)
+    provider = models.CharField(max_length=20, help_text="`simulated` until a real provider")
+    provider_reference = models.CharField(max_length=64, blank=True)
+    checks = models.JSONField(
+        default=dict, blank=True, help_text="Provider results: document, face_match, liveness"
+    )
+    reject_reason = models.CharField(max_length=40, blank=True)
+    verified_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            # One identity, one shopper account.
+            models.UniqueConstraint(
+                fields=["nni"],
+                condition=models.Q(status="verified"),
+                name="uniq_verified_nni",
+            )
+        ]
+
+    @property
+    def is_verified(self) -> bool:
+        return self.status == IdentityStatus.VERIFIED

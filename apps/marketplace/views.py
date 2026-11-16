@@ -1,10 +1,14 @@
 import django_filters
+from django.db import transaction
 from django.db.models import Count, Max, Min, Q
+from django.utils.decorators import method_decorator
 from drf_spectacular.utils import extend_schema
 from rest_framework import filters, generics, mixins, serializers, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import SimpleRateThrottle
 from rest_framework.views import APIView
 
 from apps.accounts import services as account_services
@@ -27,13 +31,17 @@ from apps.stores.access import StoreScopedViewMixin
 from apps.stores.models import Trade
 from apps.stores.roles import Perm
 
-from . import meysara, selectors, services
-from .models import Order, StoreOrder
+from . import kyc, meysara, selectors, services
+from .models import IdentityVerification, Order, StoreOrder
 from .search import ShopSearchFilter
 from .serializers import (
     AcceptSerializer,
     CartSerializer,
     ConsoleOrderSerializer,
+    IdentityCodeSerializer,
+    IdentityDocumentsSerializer,
+    IdentityStartSerializer,
+    IdentityStateSerializer,
     MeysaraOfferSerializer,
     OrderCreateSerializer,
     OrderSerializer,
@@ -305,6 +313,120 @@ class MeysaraOfferView(CustomerMixin, APIView):
         query.is_valid(raise_exception=True)
         offer = meysara.offer(request.user, query.validated_data["total"])
         return Response(MeysaraOfferSerializer(offer).data)
+
+
+# ---------------------------------------------------------------- e-KYC
+
+
+def identity_state(customer, code: str | None = None) -> dict:
+    verification = IdentityVerification.objects.filter(customer=customer).first()
+    return IdentityStateSerializer({"identity": verification, "simulation_code": code}).data
+
+
+class IdentityCodeThrottle(SimpleRateThrottle):
+    """Codes sent to a phone: 5 per hour per shopper."""
+
+    scope = "identity_code"
+
+    def get_cache_key(self, request, view):
+        return self.cache_format % {"scope": self.scope, "ident": request.user.pk}
+
+
+IDENTITY_DOC = (
+    "e-KYC required before Meysara (BCM Instruction n°13/GR/2025, chapter II). Steps: "
+    "`POST marketplace/identity` (details + consent, sends a code to the phone) → "
+    "`POST marketplace/identity/phone/verify` → `POST marketplace/identity/documents` (ID card "
+    "+ selfie). `identity.status`: `phone_pending` · `documents_pending` · `verified` · "
+    "`rejected` (start again). The provider is simulated for now: `simulation_code` carries the "
+    "SMS code, and NNIs starting with `000` are rejected (`reject_reason` "
+    "`document_unreadable`)."
+)
+
+
+@extend_schema(tags=["marketplace: identity"])
+class IdentityView(CustomerMixin, APIView):
+    def get_throttles(self):
+        if self.request.method == "POST":
+            return [*super().get_throttles(), IdentityCodeThrottle()]
+        return super().get_throttles()
+
+    @extend_schema(
+        operation_id="marketplace_identity_get",
+        responses={200: IdentityStateSerializer},
+        description=IDENTITY_DOC,
+    )
+    def get(self, request):
+        return Response(identity_state(request.user))
+
+    @extend_schema(
+        operation_id="marketplace_identity_start",
+        request=IdentityStartSerializer,
+        responses={200: IdentityStateSerializer},
+        description="Starts or restarts the check and sends a code to `phone` (10 min, 3 "
+        "attempts; 5 codes per hour). Errors (with `field`): `consent_required`, `invalid_nni`, "
+        "`invalid_phone`, `underage` (18+); `nni_already_used` (409), "
+        "`identity_already_verified` (409).",
+    )
+    def post(self, request):
+        serializer = IdentityStartSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        _, code = kyc.start(request.user, **serializer.validated_data)
+        return Response(identity_state(request.user, code))
+
+
+@extend_schema(tags=["marketplace: identity"])
+class IdentityResendView(CustomerMixin, APIView):
+    def get_throttles(self):
+        return [*super().get_throttles(), IdentityCodeThrottle()]
+
+    @extend_schema(
+        operation_id="marketplace_identity_phone_resend",
+        request=None,
+        responses={200: IdentityStateSerializer},
+        description="A new code to the same phone. Errors: `identity_not_started`, "
+        "`identity_step_done` (409).",
+    )
+    def post(self, request):
+        _, code = kyc.resend_code(request.user)
+        return Response(identity_state(request.user, code))
+
+
+@extend_schema(tags=["marketplace: identity"])
+# Outside the request transaction, so that a wrong code stays counted (see kyc.verify_phone).
+@method_decorator(transaction.non_atomic_requests, name="dispatch")
+class IdentityVerifyPhoneView(CustomerMixin, APIView):
+    @extend_schema(
+        operation_id="marketplace_identity_phone_verify",
+        request=IdentityCodeSerializer,
+        responses={200: IdentityStateSerializer},
+        description="Errors: `invalid_code` (with `attempts_left`), `code_expired`, "
+        "`identity_not_started`, `identity_step_done` (409).",
+    )
+    def post(self, request):
+        serializer = IdentityCodeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        kyc.verify_phone(request.user, serializer.validated_data["code"])
+        return Response(identity_state(request.user))
+
+
+@extend_schema(tags=["marketplace: identity"])
+class IdentityDocumentsView(CustomerMixin, APIView):
+    parser_classes = [MultiPartParser]
+
+    @extend_schema(
+        operation_id="marketplace_identity_documents",
+        request={"multipart/form-data": IdentityDocumentsSerializer},
+        responses={200: IdentityStateSerializer},
+        description="The provider checks the ID card, matches the face and runs a liveness "
+        "check; the photos are not kept. Ends in `verified` or `rejected`. Errors (with "
+        "`field`): `unsupported_file_type`, `file_too_large`; `identity_not_started`, "
+        "`identity_wrong_step` (409), `nni_already_used` (409).",
+    )
+    def post(self, request):
+        serializer = IdentityDocumentsSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        kyc.check_documents(request.user, **serializer.validated_data)
+        return Response(identity_state(request.user))
 
 
 # ---------------------------------------------------------------- customer orders

@@ -114,6 +114,9 @@ PASSWORD_RESET_TIMEOUT = 30 * 60
 
 EMAIL_CODE_TTL = timedelta(minutes=10)
 EMAIL_CODE_MAX_ATTEMPTS = 3
+# Shoppers' e-KYC (apps.marketplace.kyc): the one-time code sent to their phone.
+KYC_OTP_TTL = timedelta(minutes=10)
+KYC_OTP_MAX_ATTEMPTS = 3
 INVITATION_TTL = timedelta(days=7)
 IMPERSONATION_TTL = timedelta(minutes=30)
 
@@ -154,6 +157,7 @@ REST_FRAMEWORK = {
         "auth_ip": "20/min",
         "auth_email": "5/min",
         "email_code": "5/hour",
+        "identity_code": "5/hour",
         "user": "600/min",
     },
     "DEFAULT_THROTTLE_CLASSES": ["rest_framework.throttling.UserRateThrottle"],
