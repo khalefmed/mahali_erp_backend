@@ -1,14 +1,16 @@
 from django.db.models import Q, Sum, Value
 from django.db.models.functions import Coalesce
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.stores.access import StoreScopedViewMixin
 from apps.stores.roles import Perm
 
-from . import services
+from . import selectors, services
 from .filters import CreditFilter, CustomerFilter, ExpenseFilter, SaleFilter
 from .models import CashSession, Credit, CreditNote, Customer, Expense, Sale
 from .serializers import (
@@ -16,13 +18,16 @@ from .serializers import (
     CloseSessionSerializer,
     CreditNoteSerializer,
     CreditSerializer,
+    CustomerAdvanceListSerializer,
     CustomerSerializer,
+    CustomerStatementSerializer,
     ExpenseSerializer,
     PaymentSerializer,
     RepaymentSerializer,
     SaleCreateSerializer,
     SaleListSerializer,
     SaleSerializer,
+    StatementQuerySerializer,
 )
 
 
@@ -42,6 +47,38 @@ class CustomerViewSet(StoreScopedViewMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(store=self.store)
+
+    @extend_schema(
+        operation_id="stores_customers_statement",
+        parameters=[StatementQuerySerializer],
+        responses={200: CustomerStatementSerializer},
+        description="Account statement: invoices on account and repayments over the period "
+        "(default: this year), opening balance, payment habits. `terms` isn't configured yet.",
+    )
+    @action(detail=True, methods=["get"])
+    def statement(self, request, store_id, pk=None):
+        customer = self.get_object()
+        query = StatementQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        date_to = query.validated_data.get("date_to") or timezone.localdate()
+        date_from = query.validated_data.get("date_from") or date_to.replace(month=1, day=1)
+        data = selectors.customer_statement(customer, date_from, date_to)
+        return Response(CustomerStatementSerializer(data).data)
+
+
+@extend_schema(tags=["stores: customers"])
+class CustomerAdvanceView(StoreScopedViewMixin, APIView):
+    required_permissions = {"GET": Perm.CUSTOMERS_VIEW}
+
+    @extend_schema(
+        operation_id="stores_customer_advances",
+        responses={200: CustomerAdvanceListSerializer},
+        description="What the shop owes its customers (down payments, credit notes to give "
+        "back). Neither is recorded yet: credit notes are refunded or deducted at once, so the "
+        "list is empty.",
+    )
+    def get(self, request, store_id):
+        return Response({"results": []})
 
 
 @extend_schema(tags=["stores: till & sales"])

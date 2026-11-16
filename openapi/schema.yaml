@@ -6348,6 +6348,147 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
           description: Too many requests
+  /api/v1/stores/{store_id}/accounting/closing:
+    get:
+      operationId: stores_accounting_closing
+      description: 'Month closing checklist and VAT declaration. Purchase VAT and
+        bank statements are not recorded yet: `vat_deductible` is 0, the bank never
+        reconciled.'
+      parameters:
+      - in: query
+        name: date_from
+        schema:
+          type: string
+          format: date
+        description: 'Default: 1st of this month'
+      - in: query
+        name: date_to
+        schema:
+          type: string
+          format: date
+        description: 'Default: today'
+      - in: path
+        name: store_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - 'stores: accounting'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Closing'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/stores/{store_id}/accounting/journal:
+    get:
+      operationId: stores_accounting_journal
+      description: Entries posted automatically on one day (sales, payments, credit
+        notes, expenses, receipts, supplier payments), SYSCOHADA accounts.
+      parameters:
+      - in: query
+        name: date
+        schema:
+          type: string
+          format: date
+        description: 'Default: today'
+      - in: path
+        name: store_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - 'stores: accounting'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JournalDay'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
   /api/v1/stores/{store_id}/cash-sessions:
     get:
       operationId: stores_cash_sessions_list
@@ -7194,6 +7335,68 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
           description: Too many requests
+  /api/v1/stores/{store_id}/customer-advances:
+    get:
+      operationId: stores_customer_advances
+      description: 'What the shop owes its customers (down payments, credit notes
+        to give back). Neither is recorded yet: credit notes are refunded or deducted
+        at once, so the list is empty.'
+      parameters:
+      - in: path
+        name: store_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - 'stores: customers'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerAdvanceList'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
   /api/v1/stores/{store_id}/customers:
     get:
       operationId: stores_customers_list
@@ -7457,6 +7660,87 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Customer'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/stores/{store_id}/customers/{id}/statement:
+    get:
+      operationId: stores_customers_statement
+      description: 'Account statement: invoices on account and repayments over the
+        period (default: this year), opening balance, payment habits. `terms` isn''t
+        configured yet.'
+      parameters:
+      - in: query
+        name: date_from
+        schema:
+          type: string
+          format: date
+        description: 'Default: 1 January'
+      - in: query
+        name: date_to
+        schema:
+          type: string
+          format: date
+        description: 'Default: today'
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) customer.
+        required: true
+      - in: path
+        name: store_id
+        schema:
+          type: string
+          pattern: ^[0-9a-f-]{36}$
+        required: true
+      tags:
+      - 'stores: customers'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerStatement'
           description: ''
         '400':
           content:
@@ -8251,6 +8535,66 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/StoreOrder'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/stores/{store_id}/member-activity:
+    get:
+      operationId: stores_member_activity
+      description: Presence of each active member (last session seen, open till).
+      parameters:
+      - in: path
+        name: store_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - 'stores: team'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberActivityList'
           description: ''
         '400':
           content:
@@ -9486,6 +9830,78 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
           description: Too many requests
+  /api/v1/stores/{store_id}/reports/details:
+    get:
+      operationId: stores_reports_details
+      description: Sales by category (VAT excluded), dormant stock, supplier payables.
+      parameters:
+      - in: query
+        name: date_from
+        schema:
+          type: string
+          format: date
+        description: 'Default: today'
+      - in: query
+        name: date_to
+        schema:
+          type: string
+          format: date
+        description: 'Default: date_from'
+      - in: path
+        name: store_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - 'stores: reports'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportDetails'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
   /api/v1/stores/{store_id}/reports/summary:
     get:
       operationId: stores_reports_summary
@@ -9779,6 +10195,74 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Sale'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/stores/{store_id}/seller-performance/me:
+    get:
+      operationId: stores_seller_performance_me
+      description: My collected sales of the month in this store and the sellers ranking.
+        Commissions and targets aren't configured yet (rate 0, target null).
+      parameters:
+      - in: query
+        name: month
+        schema:
+          type: string
+          minLength: 1
+          pattern: ^\d{4}-(0[1-9]|1[0-2])$
+        description: YYYY-MM
+      - in: path
+        name: store_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - 'stores: reports'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SellerPerformance'
           description: ''
         '400':
           content:
@@ -10381,6 +10865,179 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/StockMovement'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/stores/{store_id}/supplier-payments:
+    get:
+      operationId: stores_supplier_payments_list
+      description: Règlements fournisseurs. A cash payment needs my open till (`no_open_cash_session`).
+      parameters:
+      - in: query
+        name: method
+        schema:
+          type: string
+          enum:
+          - bank_transfer
+          - bankily
+          - cash
+          - masrvi
+          - sedad
+        description: |-
+          * `cash` - Espèces
+          * `bankily` - Bankily
+          * `masrvi` - Masrvi
+          * `sedad` - Sedad
+          * `bank_transfer` - Virement
+      - name: ordering
+        required: false
+        in: query
+        description: Quel champ utiliser pour classer les résultats.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Un numéro de page de l'ensemble des résultats.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Nombre de résultats à retourner par page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: Un terme de recherche.
+        schema:
+          type: string
+      - in: path
+        name: store_id
+        schema:
+          type: string
+          pattern: ^[0-9a-f-]{36}$
+        required: true
+      - in: query
+        name: supplier
+        schema:
+          type: string
+          format: uuid
+      tags:
+      - 'stores: suppliers'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSupplierPaymentList'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+    post:
+      operationId: stores_supplier_payments_create
+      description: Règlements fournisseurs. A cash payment needs my open till (`no_open_cash_session`).
+      parameters:
+      - in: path
+        name: store_id
+        schema:
+          type: string
+          pattern: ^[0-9a-f-]{36}$
+        required: true
+      tags:
+      - 'stores: suppliers'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierPaymentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SupplierPaymentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierPayment'
           description: ''
         '400':
           content:
@@ -11234,6 +11891,22 @@ components:
       required:
       - name
       - trade
+    CategoryRevenue:
+      type: object
+      properties:
+        category:
+          type: string
+          nullable: true
+          description: Category slug
+        name:
+          type: string
+        revenue:
+          type: integer
+          description: MRU, VAT excluded
+      required:
+      - category
+      - name
+      - revenue
     CloseSessionRequest:
       type: object
       properties:
@@ -11245,6 +11918,58 @@ components:
           maxLength: 255
       required:
       - counted_cash
+    Closing:
+      type: object
+      properties:
+        vat_deductible:
+          type: integer
+          description: VAT paid on purchases (account 445)
+        declaration:
+          $ref: '#/components/schemas/Declaration'
+        checks:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClosingCheck'
+      required:
+      - checks
+      - declaration
+      - vat_deductible
+    ClosingCheck:
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/CodeEnum'
+        done:
+          type: boolean
+        count:
+          type: integer
+          nullable: true
+        date:
+          type: string
+          format: date
+          nullable: true
+        account:
+          type: string
+          nullable: true
+      required:
+      - code
+      - done
+    CodeEnum:
+      enum:
+      - sales_posted
+      - purchases_matched
+      - bank_reconciled
+      - tills_closed
+      - expense_receipts
+      - cash_gaps
+      type: string
+      description: |-
+        * `sales_posted` - sales_posted
+        * `purchases_matched` - purchases_matched
+        * `bank_reconciled` - bank_reconciled
+        * `tills_closed` - tills_closed
+        * `expense_receipts` - expense_receipts
+        * `cash_gaps` - cash_gaps
     ConditionEnum:
       enum:
       - new
@@ -11780,6 +12505,42 @@ components:
       - credit_balance
       - id
       - name
+    CustomerAdvance:
+      type: object
+      properties:
+        customer:
+          type: string
+          format: uuid
+        customer_name:
+          type: string
+        amount:
+          type: integer
+        kind:
+          $ref: '#/components/schemas/CustomerAdvanceKindEnum'
+        note:
+          type: string
+      required:
+      - amount
+      - customer
+      - customer_name
+      - kind
+    CustomerAdvanceKindEnum:
+      enum:
+      - deposit
+      - credit_note
+      type: string
+      description: |-
+        * `deposit` - deposit
+        * `credit_note` - credit_note
+    CustomerAdvanceList:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerAdvance'
+      required:
+      - results
     CustomerRequest:
       type: object
       properties:
@@ -11806,6 +12567,38 @@ components:
           type: boolean
       required:
       - name
+    CustomerStatement:
+      type: object
+      properties:
+        opening_balance:
+          type: integer
+          description: Owed before `from`
+        movements:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatementMovement'
+        year_invoiced:
+          type: integer
+        year_paid:
+          type: integer
+        average_days_to_pay:
+          type: integer
+          nullable: true
+        usual_payment:
+          type: string
+        terms:
+          allOf:
+          - $ref: '#/components/schemas/StatementTerms'
+          nullable: true
+          description: 'Not configured yet: null'
+      required:
+      - average_days_to_pay
+      - movements
+      - opening_balance
+      - terms
+      - usual_payment
+      - year_invoiced
+      - year_paid
     DailyRow:
       type: object
       properties:
@@ -11865,6 +12658,25 @@ components:
           type: string
           default: ''
           description: Required for request-info, reject, suspend
+    Declaration:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/DeclarationStatusEnum'
+        due_date:
+          type: string
+          format: date
+      required:
+      - due_date
+      - status
+    DeclarationStatusEnum:
+      enum:
+      - to_file
+      - filed
+      type: string
+      description: |-
+        * `to_file` - to_file
+        * `filed` - filed
     DocumentKindEnum:
       enum:
       - id_front
@@ -12141,6 +12953,72 @@ components:
         * `accepted` - accepted
         * `revoked` - revoked
         * `expired` - expired
+    JournalDay:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/JournalEntry'
+      required:
+      - date
+      - entries
+    JournalEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        journal:
+          $ref: '#/components/schemas/JournalEnum'
+        reference:
+          type: string
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/JournalLine'
+      required:
+      - id
+      - journal
+      - lines
+      - reference
+    JournalEnum:
+      enum:
+      - sales
+      - purchases
+      - bank
+      - cash
+      - misc
+      type: string
+      description: |-
+        * `sales` - sales
+        * `purchases` - purchases
+        * `bank` - bank
+        * `cash` - cash
+        * `misc` - misc
+    JournalLine:
+      type: object
+      properties:
+        account:
+          type: string
+          description: SYSCOHADA account number
+        account_name:
+          type: string
+        label:
+          type: string
+          description: Customer, supplier, note or empty
+        debit:
+          type: integer
+        credit:
+          type: integer
+      required:
+      - account
+      - account_name
+      - credit
+      - debit
+      - label
     LanguageEnum:
       enum:
       - fr
@@ -12151,6 +13029,26 @@ components:
         * `fr` - Français
         * `ar` - العربية
         * `en` - English
+    LeaderboardRow:
+      type: object
+      properties:
+        user:
+          type: string
+          format: uuid
+        name:
+          type: string
+        store_name:
+          type: string
+        revenue:
+          type: integer
+        is_me:
+          type: boolean
+      required:
+      - is_me
+      - name
+      - revenue
+      - store_name
+      - user
     LoginRequest:
       type: object
       properties:
@@ -12187,6 +13085,39 @@ components:
       description: |-
         * `cash_on_delivery` - Paiement à la livraison
         * `meysara` - Meysara (en 4 fois)
+    MemberActivity:
+      type: object
+      properties:
+        user:
+          type: string
+          format: uuid
+        phone:
+          type: string
+          nullable: true
+        last_seen_at:
+          type: string
+          format: date-time
+          nullable: true
+        online:
+          type: boolean
+          description: Seen in the last 5 minutes
+        till_open:
+          type: boolean
+      required:
+      - last_seen_at
+      - online
+      - phone
+      - till_open
+      - user
+    MemberActivityList:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemberActivity'
+      required:
+      - results
     MemberRow:
       type: object
       properties:
@@ -13220,6 +14151,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Supplier'
+    PaginatedSupplierPaymentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SupplierPayment'
     PasswordChangeRequest:
       type: object
       properties:
@@ -14056,6 +15010,26 @@ components:
       required:
       - amount
       - method
+    ReportDetails:
+      type: object
+      properties:
+        sales_by_category:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryRevenue'
+        dormant_products:
+          type: integer
+          description: In stock, no sale for dormant_days
+        dormant_days:
+          type: integer
+        supplier_payables:
+          type: integer
+          description: Received goods minus supplier payments
+      required:
+      - dormant_days
+      - dormant_products
+      - sales_by_category
+      - supplier_payables
     Sale:
       type: object
       properties:
@@ -14303,6 +15277,44 @@ components:
         * `completed` - Completed
         * `partially_refunded` - Partially Refunded
         * `refunded` - Refunded
+    SellerPerformance:
+      type: object
+      properties:
+        month:
+          type: string
+        revenue:
+          type: integer
+          description: Collected sales of the month, MRU
+        sales_count:
+          type: integer
+        commission_rate:
+          type: number
+          format: double
+          description: 0 until commissions are configured
+        commission:
+          type: integer
+        target:
+          type: integer
+          nullable: true
+        bonus:
+          type: integer
+          nullable: true
+        stores_count:
+          type: integer
+        leaderboard:
+          type: array
+          items:
+            $ref: '#/components/schemas/LeaderboardRow'
+      required:
+      - bonus
+      - commission
+      - commission_rate
+      - leaderboard
+      - month
+      - revenue
+      - sales_count
+      - stores_count
+      - target
     SellerRow:
       type: object
       properties:
@@ -14726,6 +15738,55 @@ components:
           type: boolean
       required:
       - role
+    StatementMovement:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        reference:
+          type: string
+          description: Sale number (invoice) or payment reference
+        label:
+          type: string
+        kind:
+          $ref: '#/components/schemas/StatementMovementKindEnum'
+        amount:
+          type: integer
+          description: Always positive; kind says which way
+        credit:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+      - amount
+      - credit
+      - date
+      - kind
+      - label
+      - reference
+    StatementMovementKindEnum:
+      enum:
+      - invoice
+      - payment
+      type: string
+      description: |-
+        * `invoice` - invoice
+        * `payment` - payment
+    StatementTerms:
+      type: object
+      properties:
+        credit_limit:
+          type: integer
+          nullable: true
+        payment_days:
+          type: integer
+          nullable: true
+        contact_name:
+          type: string
+      required:
+      - credit_limit
+      - payment_days
     StockAdjustment:
       type: object
       properties:
@@ -15407,6 +16468,66 @@ components:
       - created_at
       - id
       - name
+    SupplierPayment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        supplier:
+          type: string
+          format: uuid
+        supplier_name:
+          type: string
+          readOnly: true
+        amount:
+          type: integer
+          minimum: 1
+        method:
+          $ref: '#/components/schemas/PaymentMethodEnum'
+        reference:
+          type: string
+          maxLength: 60
+        note:
+          type: string
+          maxLength: 255
+        created_by_name:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - amount
+      - created_at
+      - created_by_name
+      - id
+      - method
+      - supplier
+      - supplier_name
+    SupplierPaymentRequest:
+      type: object
+      properties:
+        supplier:
+          type: string
+          format: uuid
+        amount:
+          type: integer
+          minimum: 1
+        method:
+          $ref: '#/components/schemas/PaymentMethodEnum'
+        reference:
+          type: string
+          maxLength: 60
+        note:
+          type: string
+          maxLength: 255
+      required:
+      - amount
+      - method
+      - supplier
     SupplierRequest:
       type: object
       properties:

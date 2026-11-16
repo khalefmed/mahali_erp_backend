@@ -1,3 +1,4 @@
+from django.urls import path
 from rest_framework.routers import SimpleRouter
 
 from . import views
@@ -10,4 +11,7 @@ router.register(f"{S}/sales", views.SaleViewSet, basename="sale")
 router.register(f"{S}/credit-notes", views.CreditNoteViewSet, basename="credit-note")
 router.register(f"{S}/credits", views.CreditViewSet, basename="credit")
 router.register(f"{S}/expenses", views.ExpenseViewSet, basename="expense")
-urlpatterns = router.urls
+urlpatterns = [
+    path("stores/<uuid:store_id>/customer-advances", views.CustomerAdvanceView.as_view()),
+    *router.urls,
+]
