@@ -26,12 +26,13 @@ from apps.accounts.throttles import AuthIpThrottle, EmailCodeThrottle
 from apps.accounts.views import LoginView, PublicAuthView
 from apps.catalog.models import Product
 from apps.console.views import ConsoleMixin
+from apps.core.exceptions import ApiError
 from apps.core.tenancy import enable_marketplace_read
 from apps.stores.access import StoreScopedViewMixin
 from apps.stores.models import Trade
 from apps.stores.roles import Perm
 
-from . import kyc, meysara, selectors, services
+from . import contract, kyc, meysara, selectors, services
 from .models import IdentityVerification, Order, StoreOrder
 from .search import ShopSearchFilter
 from .serializers import (
@@ -42,7 +43,10 @@ from .serializers import (
     IdentityDocumentsSerializer,
     IdentityStartSerializer,
     IdentityStateSerializer,
+    MeysaraContractRequestSerializer,
+    MeysaraContractTermsSerializer,
     MeysaraOfferSerializer,
+    MeysaraSignedContractSerializer,
     OrderCreateSerializer,
     OrderSerializer,
     PayInstalmentSerializer,
@@ -315,6 +319,31 @@ class MeysaraOfferView(CustomerMixin, APIView):
         return Response(MeysaraOfferSerializer(offer).data)
 
 
+@extend_schema(tags=["marketplace: orders"])
+class MeysaraContractView(CustomerMixin, APIView):
+    @extend_schema(
+        operation_id="marketplace_meysara_contract",
+        request=MeysaraContractRequestSerializer,
+        responses={200: MeysaraContractTermsSerializer},
+        description="The Meysara contract for this cart and share, in `language`: parties, "
+        "items, schedule (days after delivery), plain-language clauses. Show it, let the "
+        "shopper tick the box, then send `version` and `digest` back with the order "
+        "(`meysara_contract`). Errors: those of the order (`insufficient_stock`…) and "
+        "`meysara_not_allowed` (409, with `reason`).",
+    )
+    def post(self, request):
+        serializer = MeysaraContractRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        terms = contract.preview(
+            request.user,
+            lines=data["lines"],
+            percent=data["meysara_percent"],
+            language=data["language"],
+        )
+        return Response(MeysaraContractTermsSerializer(terms).data)
+
+
 # ---------------------------------------------------------------- e-KYC
 
 
@@ -452,7 +481,7 @@ class CustomerOrderViewSet(
             return Order.objects.none()
         return (
             Order.objects.filter(customer=self.request.user)
-            .select_related("meysara_plan")
+            .select_related("meysara_plan__contract")
             .prefetch_related("lines", "meysara_plan__instalments")
         )
 
@@ -464,7 +493,9 @@ class CustomerOrderViewSet(
         "fixed now. `payment_method=meysara` with `meysara_percent` (one of the offer's "
         "`choices`) reserves a pay-in-4 plan. Errors: `empty_cart`, `insufficient_stock` "
         "(409, with `field`, `available`), `invalid_quantity`, `whole_quantity_required`, "
-        "`meysara_percent_required`, `meysara_not_allowed` (409, with `reason`).",
+        "`meysara_percent_required`, `meysara_not_allowed` (409, with `reason`), "
+        "`meysara_contract_required` (no accepted contract), `meysara_contract_outdated` "
+        "(409: prices, items or text changed since it was read; fetch it again).",
     )
     def create(self, request, *args, **kwargs):
         serializer = OrderCreateSerializer(data=request.data)
@@ -478,11 +509,30 @@ class CustomerOrderViewSet(
             note=note,
             payment_method=data.pop("payment_method"),
             meysara_percent=data.pop("meysara_percent", None),
+            meysara_contract=data.pop("meysara_contract", None),
+            request=request,
         )
         return Response(
             OrderSerializer(self.get_queryset().get(pk=order.pk)).data,
             status=status.HTTP_201_CREATED,
         )
+
+    @extend_schema(
+        operation_id="marketplace_orders_meysara_contract",
+        request=None,
+        responses={200: MeysaraSignedContractSerializer},
+        description="The Meysara contract the shopper signed for this order, as shown then. "
+        "Errors: `no_meysara_contract` (404: paid on delivery, or booked before contracts).",
+    )
+    @action(detail=True, methods=["get"], url_path="meysara/contract")
+    def meysara_contract(self, request, pk=None):
+        order = self.get_object()
+        signed = getattr(getattr(order, "meysara_plan", None), "contract", None)
+        if signed is None:
+            raise ApiError(
+                "no_meysara_contract", "This order has no Meysara contract.", status_code=404
+            )
+        return Response(MeysaraSignedContractSerializer(signed).data)
 
     @extend_schema(
         operation_id="marketplace_orders_cancel",
@@ -574,7 +624,7 @@ class ConsoleOrderViewSet(ConsoleMixin, MarketplaceReadMixin, viewsets.ReadOnlyM
     search_fields = ["number", "customer__email", "delivery_phone", "delivery_name"]
 
     def get_queryset(self):
-        return Order.objects.select_related("customer", "meysara_plan").prefetch_related(
+        return Order.objects.select_related("customer", "meysara_plan__contract").prefetch_related(
             "lines",
             "meysara_plan__instalments",
             "store_orders__store",

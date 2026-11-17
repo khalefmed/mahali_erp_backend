@@ -177,6 +177,26 @@ class MeysaraInstalment(BaseModel):
         ]
 
 
+class MeysaraContract(BaseModel):
+    """The pay-in-4 contract the shopper read and accepted (ticked box) before ordering.
+
+    Stored frozen: the text and amounts exactly as shown, in the language shown, with the
+    digest that tied them to the order. Rules: `apps.marketplace.contract`."""
+
+    plan = models.OneToOneField(MeysaraPlan, on_delete=models.PROTECT, related_name="contract")
+    number = models.CharField(max_length=20, unique=True, help_text="MEY-2611-0006")
+    version = models.CharField(max_length=10, help_text="Version of the contract text")
+    language = models.CharField(max_length=2, help_text="fr · ar · en, as shown")
+    digest = models.CharField(max_length=64, help_text="SHA-256 of identity, items and amounts")
+    terms = models.JSONField(help_text="The contract as shown and accepted")
+    accepted_at = models.DateTimeField()
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ["-accepted_at"]
+
+
 class OrderSequence(models.Model):
     """Gapless marketplace order numbers per month: MP-2611-0001."""
 

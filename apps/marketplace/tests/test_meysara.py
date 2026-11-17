@@ -10,7 +10,6 @@ from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from apps.console.models import PlatformSettings
 from apps.marketplace import meysara
 from apps.marketplace.models import MeysaraInstalment, MeysaraPlan, Order
 from conftest import api, make_user
@@ -19,16 +18,6 @@ from .helpers import PUBLIC, order_payload, store_client, verify_identity
 
 pytestmark = pytest.mark.django_db
 CONSOLE = "/api/v1/console/marketplace/orders"
-
-
-@pytest.fixture
-def rules(margin):
-    """Small amounts so the earbuds (275 MRU each with the margin) can use Meysara."""
-    settings = PlatformSettings.load()
-    settings.meysara_min_total = 1000
-    settings.meysara_max_financed = 60000
-    settings.save()
-    return settings
 
 
 def ready(user):
@@ -58,12 +47,34 @@ def offer(client, total):
 
 
 def meysara_order(client, variant, quantity="5", percent=50):
+    """Read the contract, accept it, order (as the app does)."""
     payload = {
         **order_payload((variant, quantity)),
         "payment_method": "meysara",
         "meysara_percent": percent,
+        "meysara_contract": accepted_contract(client, variant, quantity, percent),
     }
     return client.post(f"{PUBLIC}/orders", payload, format="json")
+
+
+def accepted_contract(client, variant, quantity="5", percent=50, language="fr"):
+    shown = client.post(
+        f"{PUBLIC}/meysara/contract",
+        {
+            "lines": [{"variant": str(variant.id), "quantity": quantity}],
+            "meysara_percent": percent,
+            "language": language,
+        },
+        format="json",
+    )
+    # Not offered: send any acceptance, the order then says why (meysara_not_allowed).
+    data = shown.data if shown.status_code == 200 else {"version": "?", "digest": "?"}
+    return {
+        "version": data["version"],
+        "digest": data["digest"],
+        "language": language,
+        "accepted": True,
+    }
 
 
 def deliver(order_id, store, staff_client):

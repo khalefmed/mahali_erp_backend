@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from apps.accounts.models import Language
 from apps.accounts.serializers import UserSerializer
 from apps.catalog.models import Brand, Category, Product, Variant
 
@@ -8,6 +9,7 @@ from .models import (
     IdentityStatus,
     IdentityVerification,
     InstalmentMethod,
+    MeysaraContract,
     MeysaraInstalment,
     MeysaraPlan,
     MeysaraPlanStatus,
@@ -142,6 +144,17 @@ class QuoteSerializer(serializers.Serializer):
     total = serializers.IntegerField(help_text="MRU, available lines only")
 
 
+# Same codes as the accounts' language, so one enum in the schema.
+LANGUAGE_CHOICES = Language.choices
+
+
+class MeysaraContractAcceptanceSerializer(serializers.Serializer):
+    version = serializers.CharField(max_length=10)
+    digest = serializers.CharField(max_length=64)
+    language = serializers.ChoiceField(choices=LANGUAGE_CHOICES)
+    accepted = serializers.BooleanField(help_text="The shopper ticked the box")
+
+
 class OrderCreateSerializer(CartSerializer):
     delivery_name = serializers.CharField(max_length=120)
     delivery_phone = serializers.CharField(max_length=32)
@@ -156,6 +169,12 @@ class OrderCreateSerializer(CartSerializer):
         required=False,
         allow_null=True,
         help_text="With payment_method=meysara: one of the offer's `choices`",
+    )
+    meysara_contract = MeysaraContractAcceptanceSerializer(
+        required=False,
+        allow_null=True,
+        help_text="With payment_method=meysara: the contract shown "
+        "(`marketplace/meysara/contract`), accepted",
     )
 
 
@@ -197,13 +216,83 @@ class MeysaraInstalmentSerializer(serializers.ModelSerializer):
         return meysara.instalment_status(obj)
 
 
+class MeysaraContractRequestSerializer(CartSerializer):
+    meysara_percent = serializers.ChoiceField(choices=[(25, "25 %"), (50, "50 %"), (100, "100 %")])
+    language = serializers.ChoiceField(choices=LANGUAGE_CHOICES, default="fr")
+
+
+class ContractPartySerializer(serializers.Serializer):
+    full_name = serializers.CharField()
+    nni = serializers.CharField(help_text="Masked: •••• 4821")
+    phone = serializers.CharField()
+
+
+class ContractSellerSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    role = serializers.CharField()
+    city = serializers.CharField()
+
+
+class ContractLineSerializer(serializers.Serializer):
+    description = serializers.CharField()
+    quantity = serializers.CharField()
+    line_total = serializers.IntegerField(help_text="MRU")
+
+
+class ContractInstalmentSerializer(serializers.Serializer):
+    number = serializers.IntegerField()
+    amount = serializers.IntegerField(help_text="MRU")
+    days_after_delivery = serializers.IntegerField()
+
+
+class ContractClauseSerializer(serializers.Serializer):
+    key = serializers.CharField()
+    title = serializers.CharField()
+    text = serializers.CharField()
+
+
+class MeysaraContractTermsSerializer(serializers.Serializer):
+    version = serializers.CharField()
+    language = serializers.ChoiceField(choices=LANGUAGE_CHOICES)
+    title = serializers.CharField()
+    digest = serializers.CharField(help_text="Send back with the order, with `version`")
+    buyer = ContractPartySerializer()
+    seller = ContractSellerSerializer()
+    lines = ContractLineSerializer(many=True)
+    total = serializers.IntegerField(help_text="MRU")
+    percent = serializers.IntegerField()
+    on_delivery = serializers.IntegerField(help_text="MRU")
+    financed = serializers.IntegerField(help_text="MRU")
+    instalments = ContractInstalmentSerializer(many=True)
+    interest = serializers.IntegerField()
+    fees = serializers.IntegerField()
+    late_fees = serializers.IntegerField()
+    clauses = ContractClauseSerializer(many=True)
+
+
+class MeysaraContractSummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MeysaraContract
+        fields = ["number", "version", "language", "accepted_at"]
+
+
+class MeysaraSignedContractSerializer(serializers.ModelSerializer):
+    terms = MeysaraContractTermsSerializer()
+
+    class Meta:
+        model = MeysaraContract
+        fields = ["number", "version", "language", "accepted_at", "terms"]
+
+
 class MeysaraPlanSerializer(serializers.ModelSerializer):
     status = serializers.ChoiceField(choices=MeysaraPlanStatus.choices)
     instalments = MeysaraInstalmentSerializer(many=True)
+    contract = serializers.SerializerMethodField()
 
     class Meta:
         model = MeysaraPlan
         fields = [
+            "contract",
             "percent",
             "financed",
             "on_delivery",
@@ -212,6 +301,11 @@ class MeysaraPlanSerializer(serializers.ModelSerializer):
             "closed_at",
             "instalments",
         ]
+
+    def get_contract(self, obj) -> MeysaraContractSummarySerializer(allow_null=True):
+        """The signed contract; null for plans booked before contracts existed."""
+        signed = getattr(obj, "contract", None)
+        return MeysaraContractSummarySerializer(signed).data if signed else None
 
 
 class PayInstalmentSerializer(serializers.Serializer):

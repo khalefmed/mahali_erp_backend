@@ -38,3 +38,13 @@ def two_shops(margin, phone_variant, earbuds_variant):
 def shopper():
     user = make_user("client@example.com")
     return user, client_for(user, UserSession.Realm.CUSTOMER)
+
+
+@pytest.fixture
+def rules(margin):
+    """Small amounts so the earbuds (275 MRU each with the margin) can use Meysara."""
+    settings = PlatformSettings.load()
+    settings.meysara_min_total = 1000
+    settings.meysara_max_financed = 60000
+    settings.save()
+    return settings

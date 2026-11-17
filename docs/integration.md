@@ -106,8 +106,12 @@ the MRU. Payment on delivery.
   closed until the shopper's identity is verified (e-KYC below), while a plan runs or an
   instalment is more than 7 days late; total ≥ 3 000 MRU, financed ≤ 60 000 MRU (settings in
   `console/settings`, never above the BCM ceiling of 60 000 MRU over 12 months, Instruction
-  n°13/GR/2025 art. 25; a share above it is left out of `choices`). Order with
-  `payment_method: "meysara", meysara_percent`. The rest is paid on delivery; instalments
+  n°13/GR/2025 art. 25; a share above it is left out of `choices`). Before ordering, show
+  the contract: `POST marketplace/meysara/contract {lines, meysara_percent, language}`; the
+  shopper ticks a box, and the order goes with `payment_method: "meysara", meysara_percent,
+  meysara_contract {version, digest, language, accepted: true}` (`meysara_contract_outdated`:
+  show the new contract). The signed contract stays readable at
+  `marketplace/orders/{id}/meysara/contract`. The rest is paid on delivery; instalments
   fall due every 14 days from delivery. The order's `meysara` block has the schedule; the
   Mahali team records payments (`console/marketplace/orders/{id}/meysara/pay`).
 - **Identity (e-KYC, before Meysara):** `GET marketplace/identity`, then

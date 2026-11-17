@@ -3,6 +3,21 @@
 Every change the web app should know about (new or changed endpoints, fields, error
 codes). Newest first. The full contract is always at `/api/schema/` on each environment.
 
+## 2026-11-17 — Meysara: electronic contract before paying in 4 (#40)
+
+- New `POST marketplace/meysara/contract {lines, meysara_percent, language}` (customer
+  token, `language` fr · ar · en): the contract for this cart and share, to show before the
+  order: `version`, `digest`, `buyer` (masked NNI), `seller`, `lines`, `total`, `financed`,
+  `on_delivery`, `instalments` (`days_after_delivery`), `interest`/`fees`/`late_fees` (0),
+  `clauses` (`key`, `title`, `text`). Errors: those of the order and `meysara_not_allowed`.
+- **Breaking:** `POST marketplace/orders` with `payment_method: "meysara"` now needs
+  `meysara_contract {version, digest, language, accepted: true}`. Errors:
+  `meysara_contract_required` (400) and `meysara_contract_outdated` (409: prices, items or
+  text changed since it was read; fetch the contract again and show it).
+- The order's `meysara` block has `contract {number, version, language, accepted_at}` (null
+  for older plans). New `GET marketplace/orders/{id}/meysara/contract`: the signed contract as
+  shown (`terms`). Error `no_meysara_contract` (404). The shopper gets a copy by email.
+
 ## 2026-11-16 — Meysara: e-KYC (simulated) and BCM ceilings (Instruction n°13/GR/2025)
 
 - New `marketplace: identity` routes (customer tokens): `GET marketplace/identity`,
