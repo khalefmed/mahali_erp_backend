@@ -3,6 +3,19 @@
 Every change the web app should know about (new or changed endpoints, fields, error
 codes). Newest first. The full contract is always at `/api/schema/` on each environment.
 
+## 2026-11-17 — e-KYC from the profile: identity given at sign-up (#45)
+
+- `POST marketplace/auth/register`: `phone` (+222, mobile), `nni` (10 digits) and
+  `birth_date` are now **required** for shoppers. Errors: `invalid_nni`, `invalid_phone`
+  (with `field`). The merchant `auth/register` does not change.
+- `GET/PATCH marketplace/me` (schema `Shopper`): new `nni`, `birth_date` and
+  `identity_locked` (read only). Once the e-KYC is verified, changing `nni` or `birth_date`
+  returns `identity_locked` (409); before, `invalid_nni` / `invalid_phone` as at sign-up.
+- `POST marketplace/identity` now takes only `{"consent": true}`: names, NNI, birth date and
+  phone come from the profile. New error `profile_incomplete` (400, with `fields`: the
+  missing ones among `full_name`, `phone`, `nni`, `birth_date`) — send the shopper to their
+  profile. `underage` and `nni_already_used` still apply.
+
 ## 2026-11-17 — e-KYC: back of the ID card (#43)
 
 - `POST marketplace/identity/documents` takes an optional `id_back` (photo of the back of the

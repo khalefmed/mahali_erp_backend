@@ -1,12 +1,16 @@
 """Shoppers' e-KYC, required before Meysara (BCM Instruction n°13/GR/2025, chapter II).
 
-1. `start`: identity details (NNI, names, birth date, phone) and explicit consent. A
-   one-time code goes to the phone (art. 4: phone ownership by OTP).
+The shopper gives their identity (names, NNI, birth date, phone) when signing up
+(formats: `check_profile`); it can change only until it is verified. The e-KYC
+then proves that the person ordering is that account holder:
+
+1. `start`: explicit consent; the identity is copied from the profile. A one-time code goes
+   to the account's phone (art. 4: phone ownership by OTP).
 2. `verify_phone`: the code (10 min, 3 attempts).
 3. `check_documents`: photos of the ID card (front, and back when the app sends it) and a
-   selfie taken live. The provider checks the document (the back carries the MRZ), matches
-   the face and runs a liveness check; the images are then dropped, never stored
-   (law n°2017-020: keep only what is needed).
+   selfie taken live. The provider checks the document against the profile's NNI (the back
+   carries the MRZ), matches the face and runs a liveness check; the images are then
+   dropped, never stored (law n°2017-020: keep only what is needed).
 
 There is no identity provider yet: `SimulatedProvider` stands in for it. It sends no SMS
 (the code is logged and returned to the app as `simulation_code`) and approves every
@@ -94,29 +98,57 @@ def _send_code(verification: IdentityVerification) -> str:
     return code
 
 
-@transaction.atomic
-def start(
-    customer,
-    *,
-    nni: str,
-    first_name: str,
-    last_name: str,
-    birth_date: date,
-    phone: str,
-    consent: bool,
-) -> tuple[IdentityVerification, str]:
-    """Starts (or restarts) the e-KYC and sends the phone code. Returns the code too, for the
-    simulated provider only."""
-    if not consent:
-        raise ApiError("consent_required", "Consent is required.", extra={"field": "consent"})
-    if not NNI.match(nni):
+PROFILE_FIELDS = ("full_name", "phone", "nni", "birth_date")
+
+
+def check_profile(*, nni: str | None = None, phone: str | None = None) -> None:
+    """Formats of the identity a shopper gives in their profile (sign-up or later)."""
+    if nni is not None and not NNI.match(nni):
         raise ApiError("invalid_nni", "The NNI has 10 digits.", extra={"field": "nni"})
-    if not PHONE.match(phone):
+    if phone is not None and not PHONE.match(phone):
         raise ApiError(
             "invalid_phone",
             "A Mauritanian mobile number: +222 and 8 digits.",
             extra={"field": "phone"},
         )
+
+
+def check_profile_change(customer, changes: dict) -> None:
+    """The NNI and the birth date are those of the verified identity: frozen once proved."""
+    locked = [
+        field
+        for field in ("nni", "birth_date")
+        if field in changes and changes[field] != getattr(customer, field)
+    ]
+    if locked and is_verified(customer):
+        raise Conflict(
+            "identity_locked",
+            "The identity is verified: the NNI and birth date can no longer change.",
+            extra={"field": locked[0]},
+        )
+    check_profile(nni=changes.get("nni"), phone=changes.get("phone"))
+
+
+def _split_name(full_name: str) -> tuple[str, str]:
+    first, _, last = " ".join(full_name.split()).partition(" ")
+    return first[:80], last[:80]
+
+
+@transaction.atomic
+def start(customer, *, consent: bool) -> tuple[IdentityVerification, str]:
+    """Starts (or restarts) the e-KYC from the shopper's profile and sends the phone code.
+    Returns the code too, for the simulated provider only."""
+    if not consent:
+        raise ApiError("consent_required", "Consent is required.", extra={"field": "consent"})
+    missing = [field for field in PROFILE_FIELDS if not getattr(customer, field)]
+    if missing:
+        raise ApiError(
+            "profile_incomplete",
+            "Complete the profile first (sign-up details).",
+            extra={"fields": missing},
+        )
+    nni, phone, birth_date = customer.nni, customer.phone, customer.birth_date
+    check_profile(nni=nni, phone=phone)
     if age_on(birth_date, timezone.localdate()) < ADULT_AGE:
         raise ApiError("underage", "Meysara is for adults only.", extra={"field": "birth_date"})
     current = IdentityVerification.objects.select_for_update().filter(customer=customer).first()
@@ -134,8 +166,7 @@ def start(
     verification = current or IdentityVerification(customer=customer)
     verification.status = IdentityStatus.PHONE_PENDING
     verification.nni = nni
-    verification.first_name = first_name.strip()
-    verification.last_name = last_name.strip()
+    verification.first_name, verification.last_name = _split_name(customer.full_name)
     verification.birth_date = birth_date
     verification.phone = phone
     verification.consent_at = timezone.now()

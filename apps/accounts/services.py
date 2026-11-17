@@ -45,6 +45,8 @@ def register(
     phone: str = "",
     language: str = "fr",
     merchant: bool = True,
+    nni: str = "",
+    birth_date=None,
 ) -> None:
     """Same response whether or not the email is taken (no account enumeration).
     `merchant=False` for marketplace shoppers: closing merchant sign-ups does not stop them."""
@@ -60,7 +62,14 @@ def register(
         else:
             _send_verification_code(existing)
         return
-    user = User(email=email, full_name=full_name.strip(), phone=phone, language=language)
+    user = User(
+        email=email,
+        full_name=full_name.strip(),
+        phone=phone,
+        language=language,
+        nni=nni,
+        birth_date=birth_date,
+    )
     password_validation.validate_password(password, user)
     user.set_password(password)
     user.save()

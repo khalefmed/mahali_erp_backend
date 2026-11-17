@@ -122,8 +122,10 @@ def test_shopper_signs_up_even_when_merchant_signups_are_closed(
     settings.save()
     client = APIClient()
     payload = {"email": "new@example.com", "password": "Very-secret-pass-42", "full_name": "Sidi"}
+    identity = {"phone": "+22246000000", "nni": "2055555555", "birth_date": "1990-01-01"}
     with django_capture_on_commit_callbacks(execute=True):
-        assert client.post(f"{PUBLIC}/auth/register", payload).status_code == 202
+        response = client.post(f"{PUBLIC}/auth/register", {**payload, **identity})
+        assert response.status_code == 202
     code = re.search(r"\b(\d{6})\b", mail.outbox[-1].body).group(1)
     response = client.post(
         f"{PUBLIC}/auth/verify-email", {"email": "new@example.com", "code": code}

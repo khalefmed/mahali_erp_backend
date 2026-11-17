@@ -39,6 +39,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)  # always stored lowercase
     full_name = models.CharField(max_length=150)
     phone = models.CharField(max_length=20, blank=True)
+    # Marketplace shoppers give them when signing up; the e-KYC then proves they are theirs.
+    nni = models.CharField(max_length=10, blank=True)
+    birth_date = models.DateField(null=True, blank=True)
     language = models.CharField(max_length=2, choices=Language.choices, default=Language.FR)
     email_verified_at = models.DateTimeField(null=True, blank=True)
     # Set the first time the Mahali team validates one of this person's stores (ID checked).
