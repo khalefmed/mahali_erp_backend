@@ -1,5 +1,6 @@
 """Marketplace test fixtures (shared by test_marketplace and test_meysara)."""
 
+from datetime import date
 from decimal import Decimal
 
 import pytest
@@ -34,9 +35,18 @@ def two_shops(margin, phone_variant, earbuds_variant):
     }
 
 
+# What a shopper gives when signing up (the e-KYC then proves it).
+PROFILE = {
+    "full_name": "Aicha Mint Ahmed",
+    "phone": "+22236000000",
+    "nni": "2012345678",
+    "birth_date": date(1995, 3, 14),
+}
+
+
 @pytest.fixture
 def shopper():
-    user = make_user("client@example.com")
+    user = make_user("client@example.com", **PROFILE)
     return user, client_for(user, UserSession.Realm.CUSTOMER)
 
 

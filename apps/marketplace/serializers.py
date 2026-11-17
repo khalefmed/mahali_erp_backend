@@ -1,10 +1,10 @@
 from rest_framework import serializers
 
 from apps.accounts.models import Language
-from apps.accounts.serializers import UserSerializer
+from apps.accounts.serializers import RegisterSerializer, UserSerializer
 from apps.catalog.models import Brand, Category, Product, Variant
 
-from . import meysara
+from . import kyc, meysara
 from .models import (
     IdentityStatus,
     IdentityVerification,
@@ -449,12 +449,39 @@ class ConsoleOrderSerializer(OrderSerializer):
 # ---------------------------------------------------------------- e-KYC
 
 
-class IdentityStartSerializer(serializers.Serializer):
-    nni = serializers.CharField(max_length=10, help_text="10 digits")
-    first_name = serializers.CharField(max_length=80)
-    last_name = serializers.CharField(max_length=80)
+class ShopperRegisterSerializer(RegisterSerializer):
+    """A shopper gives their identity once, here; the e-KYC proves it before Meysara."""
+
+    phone = serializers.CharField(max_length=16, help_text="+222 and 8 digits (mobile)")
+    nni = serializers.CharField(max_length=10, help_text="10 digits, as on the ID card")
     birth_date = serializers.DateField()
-    phone = serializers.CharField(max_length=16, help_text="+222 and 8 digits")
+
+    def validate(self, attrs):
+        kyc.check_profile(nni=attrs["nni"], phone=attrs["phone"])
+        return super().validate(attrs)
+
+
+class ShopperSerializer(UserSerializer):
+    """The shopper's profile. `nni` and `birth_date` can change until the e-KYC verifies
+    them (`identity_locked`, 409, after)."""
+
+    nni = serializers.CharField(max_length=10, required=False, help_text="10 digits")
+    birth_date = serializers.DateField(required=False, allow_null=True)
+    identity_locked = serializers.SerializerMethodField()
+
+    class Meta(UserSerializer.Meta):
+        fields = [*UserSerializer.Meta.fields, "nni", "birth_date", "identity_locked"]
+
+    def get_identity_locked(self, obj) -> bool:
+        """True once the e-KYC has verified the NNI and birth date"""
+        return kyc.is_verified(obj)
+
+    def validate(self, attrs):
+        kyc.check_profile_change(self.instance, attrs)
+        return super().validate(attrs)
+
+
+class IdentityStartSerializer(serializers.Serializer):
     consent = serializers.BooleanField(
         help_text="The shopper agrees to the identity checks and to their data being processed"
     )

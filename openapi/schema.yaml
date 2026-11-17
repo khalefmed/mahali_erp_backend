@@ -4335,18 +4335,20 @@ paths:
   /api/v1/marketplace/auth/register:
     post:
       operationId: marketplace_auth_register
-      description: Same as `auth/register` for shoppers (works even when merchant
-        sign-ups are closed). Then `marketplace/auth/verify-email`.
+      description: 'Same as `auth/register` for shoppers (works even when merchant
+        sign-ups are closed), plus their identity: `phone`, `nni`, `birth_date` (the
+        e-KYC proves it before Meysara). Then `marketplace/auth/verify-email`. Errors
+        (with `field`): `invalid_nni`, `invalid_phone`.'
       tags:
       - 'marketplace: auth'
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RegisterRequest'
+              $ref: '#/components/schemas/ShopperRegisterRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/RegisterRequest'
+              $ref: '#/components/schemas/ShopperRegisterRequest'
         required: true
       security:
       - jwtAuth: []
@@ -4591,12 +4593,13 @@ paths:
     get:
       operationId: marketplace_identity_get
       description: 'e-KYC required before Meysara (BCM Instruction n°13/GR/2025, chapter
-        II). Steps: `POST marketplace/identity` (details + consent, sends a code to
-        the phone) → `POST marketplace/identity/phone/verify` → `POST marketplace/identity/documents`
-        (ID card front and back + live selfie). `identity.status`: `phone_pending`
-        · `documents_pending` · `verified` · `rejected` (start again). The provider
-        is simulated for now: `simulation_code` carries the SMS code, and NNIs starting
-        with `000` are rejected (`reject_reason` `document_unreadable`).'
+        II). It proves that the shopper is the person of their profile (names, NNI,
+        birth date and phone, given at sign-up). Steps: `POST marketplace/identity`
+        (consent, sends a code to the profile''s phone) → `POST marketplace/identity/phone/verify`
+        → `POST marketplace/identity/documents` (ID card front and back + live selfie).
+        `identity.status`: `phone_pending` · `documents_pending` · `verified` · `rejected`
+        (start again). The provider is simulated for now: `simulation_code` carries
+        the SMS code, and NNIs starting with `000` are rejected (`reject_reason` `document_unreadable`).'
       tags:
       - 'marketplace: identity'
       security:
@@ -4648,10 +4651,11 @@ paths:
           description: Too many requests
     post:
       operationId: marketplace_identity_start
-      description: 'Starts or restarts the check and sends a code to `phone` (10 min,
-        3 attempts; 5 codes per hour). Errors (with `field`): `consent_required`,
-        `invalid_nni`, `invalid_phone`, `underage` (18+); `nni_already_used` (409),
-        `identity_already_verified` (409).'
+      description: 'Starts or restarts the check from the profile and sends a code
+        to its phone (10 min, 3 attempts; 5 codes per hour). Errors: `profile_incomplete`
+        (with `fields`: the missing ones among `full_name`, `phone`, `nni`, `birth_date`);
+        with `field`: `consent_required`, `invalid_nni`, `invalid_phone`, `underage`
+        (18+); `nni_already_used` (409), `identity_already_verified` (409).'
       tags:
       - 'marketplace: identity'
       requestBody:
@@ -4902,7 +4906,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
+                $ref: '#/components/schemas/Shopper'
           description: ''
         '400':
           content:
@@ -4943,16 +4947,18 @@ paths:
           description: Too many requests
     patch:
       operationId: marketplace_me_partial_update
+      description: 'Errors (with `field`): `invalid_nni`, `invalid_phone`; `identity_locked`
+        (409) when the NNI or the birth date change after the e-KYC.'
       tags:
       - 'marketplace: auth'
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedUserRequest'
+              $ref: '#/components/schemas/PatchedShopperRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedUserRequest'
+              $ref: '#/components/schemas/PatchedShopperRequest'
       security:
       - customerJwtAuth: []
       - jwtAuth: []
@@ -4961,7 +4967,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
+                $ref: '#/components/schemas/Shopper'
           description: ''
         '400':
           content:
@@ -14669,38 +14675,12 @@ components:
     IdentityStartRequest:
       type: object
       properties:
-        nni:
-          type: string
-          minLength: 1
-          description: 10 digits
-          maxLength: 10
-        first_name:
-          type: string
-          minLength: 1
-          maxLength: 80
-        last_name:
-          type: string
-          minLength: 1
-          maxLength: 80
-        birth_date:
-          type: string
-          format: date
-        phone:
-          type: string
-          minLength: 1
-          description: +222 and 8 digits
-          maxLength: 16
         consent:
           type: boolean
           description: The shopper agrees to the identity checks and to their data
             being processed
       required:
-      - birth_date
       - consent
-      - first_name
-      - last_name
-      - nni
-      - phone
     IdentityState:
       type: object
       properties:
@@ -16696,6 +16676,30 @@ components:
           type: boolean
         see_daily_takings:
           type: boolean
+    PatchedShopperRequest:
+      type: object
+      description: |-
+        The shopper's profile. `nni` and `birth_date` can change until the e-KYC verifies
+        them (`identity_locked`, 409, after).
+      properties:
+        full_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        phone:
+          type: string
+          maxLength: 20
+        language:
+          $ref: '#/components/schemas/LanguageEnum'
+        nni:
+          type: string
+          minLength: 1
+          description: 10 digits
+          maxLength: 10
+        birth_date:
+          type: string
+          format: date
+          nullable: true
     PatchedStaffUpdateRequest:
       type: object
       properties:
@@ -18148,6 +18152,99 @@ components:
       - max_quantity
       - price
       - warranty_months
+    Shopper:
+      type: object
+      description: |-
+        The shopper's profile. `nni` and `birth_date` can change until the e-KYC verifies
+        them (`identity_locked`, 409, after).
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        full_name:
+          type: string
+          maxLength: 150
+        phone:
+          type: string
+          maxLength: 20
+        language:
+          $ref: '#/components/schemas/LanguageEnum'
+        email_verified:
+          type: boolean
+          readOnly: true
+        identity_verified:
+          type: boolean
+          readOnly: true
+        date_joined:
+          type: string
+          format: date-time
+          readOnly: true
+        nni:
+          type: string
+          description: 10 digits
+          maxLength: 10
+        birth_date:
+          type: string
+          format: date
+          nullable: true
+        identity_locked:
+          type: boolean
+          description: True once the e-KYC has verified the NNI and birth date
+          readOnly: true
+      required:
+      - date_joined
+      - email
+      - email_verified
+      - full_name
+      - id
+      - identity_locked
+      - identity_verified
+    ShopperRegisterRequest:
+      type: object
+      description: A shopper gives their identity once, here; the e-KYC proves it
+        before Meysara.
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+        full_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        phone:
+          type: string
+          minLength: 1
+          description: +222 and 8 digits (mobile)
+          maxLength: 16
+        language:
+          allOf:
+          - $ref: '#/components/schemas/LanguageEnum'
+          default: fr
+        nni:
+          type: string
+          minLength: 1
+          description: 10 digits, as on the ID card
+          maxLength: 10
+        birth_date:
+          type: string
+          format: date
+      required:
+      - birth_date
+      - email
+      - full_name
+      - nni
+      - password
+      - phone
     Staff:
       type: object
       properties:

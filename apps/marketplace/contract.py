@@ -285,7 +285,7 @@ def terms(identity, lines: list[dict], total: int, percent: int, language: str) 
         "title": TITLE[language],
         "digest": digest(identity, lines, total, percent),
         "buyer": {
-            "full_name": f"{identity.first_name} {identity.last_name}",
+            "full_name": f"{identity.first_name} {identity.last_name}".strip(),
             "nni": masked_nni(identity.nni),
             "phone": identity.phone,
         },

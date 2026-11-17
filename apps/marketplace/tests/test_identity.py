@@ -7,7 +7,7 @@ import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 
-from apps.accounts.models import UserSession
+from apps.accounts.models import User, UserSession
 from apps.console.models import PlatformSettings
 from apps.marketplace import meysara
 from apps.marketplace.models import IdentityStatus, IdentityVerification
@@ -18,18 +18,6 @@ from .helpers import PUBLIC, verify_identity
 pytestmark = pytest.mark.django_db
 IDENTITY = f"{PUBLIC}/identity"
 JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 64
-
-
-def details(**over):
-    return {
-        "nni": "2012345678",
-        "first_name": "Aicha",
-        "last_name": "Mint Ahmed",
-        "birth_date": "1995-03-14",
-        "phone": "+22236000000",
-        "consent": True,
-        **over,
-    }
 
 
 def photo(name="photo.jpg", content=JPEG):
@@ -44,8 +32,12 @@ def send_documents(client):
     )
 
 
-def start(client, **over):
-    return client.post(IDENTITY, details(**over), format="json")
+def start(shopper, consent=True, **profile):
+    """The shopper's profile (from sign-up) with `profile` changes, then the first step."""
+    user, client = shopper
+    if profile:
+        User.objects.filter(pk=user.pk).update(**profile)
+    return client.post(IDENTITY, {"consent": consent}, format="json")
 
 
 # ---------------------------------------------------------------- the three steps
@@ -58,7 +50,7 @@ def test_full_check_verifies_the_shopper_and_keeps_no_photo(shopper, settings, t
     assert empty.status_code == 200
     assert empty.data == {"identity": None, "simulation_code": None}
 
-    started = start(client)
+    started = start(shopper)
     assert started.status_code == 200, started.data
     code = started.data["simulation_code"]
     assert len(code) == 6
@@ -85,12 +77,12 @@ def test_full_check_verifies_the_shopper_and_keeps_no_photo(shopper, settings, t
 
 def test_simulator_rejects_test_nnis_and_the_shopper_can_start_again(shopper):
     _, client = shopper
-    code = start(client, nni="0001234567").data["simulation_code"]
+    code = start(shopper, nni="0001234567").data["simulation_code"]
     client.post(f"{IDENTITY}/phone/verify", {"code": code}, format="json")
     rejected = send_documents(client).data["identity"]
     assert (rejected["status"], rejected["reject_reason"]) == ("rejected", "document_unreadable")
 
-    again = start(client)
+    again = start(shopper)
     assert again.data["identity"]["status"] == "phone_pending"
     assert again.data["identity"]["reject_reason"] == ""
 
@@ -105,8 +97,7 @@ def test_simulator_rejects_test_nnis_and_the_shopper_can_start_again(shopper):
     ],
 )
 def test_start_checks_the_details(shopper, over, code, field):
-    _, client = shopper
-    response = start(client, **over)
+    response = start(shopper, **over)
     assert (response.status_code, response.data["code"], response.data["field"]) == (
         400,
         code,
@@ -115,20 +106,35 @@ def test_start_checks_the_details(shopper, over, code, field):
     assert not IdentityVerification.objects.exists()
 
 
+def test_the_identity_comes_from_the_profile(shopper):
+    user, _ = shopper
+    identity = start(shopper).data["identity"]
+    assert (identity["first_name"], identity["last_name"]) == ("Aicha", "Mint Ahmed")
+    assert identity["birth_date"] == "1995-03-14"
+    verification = IdentityVerification.objects.get(customer=user)
+    assert (verification.nni, verification.phone) == ("2012345678", "+22236000000")
+
+
+def test_an_incomplete_profile_is_completed_first(shopper):
+    response = start(shopper, nni="", birth_date=None)
+    assert (response.status_code, response.data["code"]) == (400, "profile_incomplete")
+    assert response.data["fields"] == ["nni", "birth_date"]
+    assert not IdentityVerification.objects.exists()
+
+
 def test_meysara_is_for_adults_only(shopper):
-    _, client = shopper
     today = timezone.localdate()
     minor = today.replace(year=today.year - 18) + timedelta(days=1)
-    response = start(client, birth_date=minor.isoformat())
+    response = start(shopper, birth_date=minor.isoformat())
     assert response.data["code"] == "underage"
     adult = today.replace(year=today.year - 18)
-    assert start(client, birth_date=adult.isoformat()).status_code == 200
+    assert start(shopper, birth_date=adult.isoformat()).status_code == 200
 
 
 @pytest.mark.django_db(transaction=True)  # real commits, like the API: wrong codes stay counted
 def test_wrong_code_counts_attempts_then_expires(shopper):
     _, client = shopper
-    code = start(client).data["simulation_code"]
+    code = start(shopper).data["simulation_code"]
     wrong = "000000" if code != "000000" else "111111"
     first = client.post(f"{IDENTITY}/phone/verify", {"code": wrong}, format="json")
     assert (first.data["code"], first.data["attempts_left"]) == ("invalid_code", 2)
@@ -145,7 +151,7 @@ def test_wrong_code_counts_attempts_then_expires(shopper):
 @pytest.mark.django_db(transaction=True)  # real commits, like the API: wrong codes stay counted
 def test_code_expires_after_ten_minutes(shopper):
     user, client = shopper
-    code = start(client).data["simulation_code"]
+    code = start(shopper).data["simulation_code"]
     IdentityVerification.objects.filter(customer=user).update(
         otp_expires_at=timezone.now() - timedelta(seconds=1)
     )
@@ -159,14 +165,14 @@ def test_steps_come_in_order(shopper):
     assert client.post(f"{IDENTITY}/phone/verify", {"code": "123456"}).data["code"] == (
         "identity_not_started"
     )
-    start(client)
+    start(shopper)
     early = send_documents(client)
     assert (early.status_code, early.data["code"]) == (409, "identity_wrong_step")
 
 
 def test_documents_must_be_photos(shopper):
     _, client = shopper
-    code = start(client).data["simulation_code"]
+    code = start(shopper).data["simulation_code"]
     client.post(f"{IDENTITY}/phone/verify", {"code": code}, format="json")
     pdf = SimpleUploadedFile("id.pdf", b"%PDF-1.4 test", content_type="application/pdf")
     response = client.post(
@@ -177,7 +183,7 @@ def test_documents_must_be_photos(shopper):
 
 def test_the_back_of_the_card_is_checked_too(shopper):
     _, client = shopper
-    code = start(client).data["simulation_code"]
+    code = start(shopper).data["simulation_code"]
     client.post(f"{IDENTITY}/phone/verify", {"code": code}, format="json")
     pdf = SimpleUploadedFile("back.pdf", b"%PDF-1.4 test", content_type="application/pdf")
     wrong = client.post(
@@ -196,15 +202,14 @@ def test_the_back_of_the_card_is_checked_too(shopper):
 
 def test_one_nni_one_account(shopper):
     verify_identity(make_user("first@example.com"), nni="2012345678")
-    _, client = shopper
-    response = start(client)
+    response = start(shopper)
     assert (response.status_code, response.data["code"]) == (409, "nni_already_used")
 
 
 def test_a_verified_identity_cannot_be_overwritten(shopper):
-    user, client = shopper
+    user, _ = shopper
     verify_identity(user)
-    response = start(client, nni="2099999999")
+    response = start(shopper, nni="2099999999")
     assert (response.status_code, response.data["code"]) == (409, "identity_already_verified")
 
 
@@ -213,8 +218,7 @@ def test_identity_is_for_shoppers_only(owner_client):
 
 
 def test_each_shopper_sees_only_their_own_identity(shopper):
-    _, client = shopper
-    start(client)
+    start(shopper)
     other = client_for(make_user("other@example.com"), UserSession.Realm.CUSTOMER)
     assert other.get(IDENTITY).data["identity"] is None
 
@@ -258,3 +262,57 @@ def test_statuses_are_documented():
         "verified",
         "rejected",
     }
+
+
+# ---------------------------------------------------------------- profile
+
+
+ME = f"{PUBLIC}/me"
+
+
+def test_shoppers_sign_up_with_their_identity(db, django_capture_on_commit_callbacks):
+    from rest_framework.test import APIClient
+
+    payload = {
+        "email": "mohamed@example.com",
+        "password": "Very-secret-pass-42",
+        "full_name": "Mohamed Khalef",
+        "phone": "+22236000001",
+        "nni": "2098765432",
+        "birth_date": "1994-06-02",
+    }
+    client = APIClient()
+    for missing in ("phone", "nni", "birth_date"):
+        partial = {k: v for k, v in payload.items() if k != missing}
+        assert client.post(f"{PUBLIC}/auth/register", partial).status_code == 400
+    wrong = client.post(f"{PUBLIC}/auth/register", {**payload, "nni": "123"})
+    assert (wrong.data["code"], wrong.data["field"]) == ("invalid_nni", "nni")
+    with django_capture_on_commit_callbacks(execute=True):
+        assert client.post(f"{PUBLIC}/auth/register", payload).status_code == 202
+    user = User.objects.get(email="mohamed@example.com")
+    assert (user.nni, user.birth_date.isoformat(), user.phone) == (
+        "2098765432",
+        "1994-06-02",
+        "+22236000001",
+    )
+
+
+def test_the_nni_can_change_until_it_is_verified(shopper):
+    user, client = shopper
+    me = client.get(ME).data
+    assert (me["nni"], me["birth_date"], me["identity_locked"]) == (
+        "2012345678",
+        "1995-03-14",
+        False,
+    )
+    fixed = client.patch(ME, {"nni": "2012345679"}, format="json")
+    assert fixed.status_code == 200, fixed.data
+    assert client.patch(ME, {"nni": "12"}, format="json").data["code"] == "invalid_nni"
+
+    verify_identity(user, nni="2012345679")
+    locked = client.patch(ME, {"nni": "2011111111"}, format="json")
+    assert (locked.status_code, locked.data["code"]) == (409, "identity_locked")
+    assert client.patch(ME, {"birth_date": "1990-01-01"}, format="json").status_code == 409
+    same = client.patch(ME, {"nni": "2012345679", "full_name": "Aicha M. Ahmed"}, format="json")
+    assert same.status_code == 200
+    assert same.data["identity_locked"] is True

@@ -2,7 +2,7 @@ import django_filters
 from django.db import transaction
 from django.db.models import Count, Max, Min, Q
 from django.utils.decorators import method_decorator
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import filters, generics, mixins, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
@@ -18,7 +18,6 @@ from apps.accounts.serializers import (
     AuthResponseSerializer,
     EmailSerializer,
     LoginSerializer,
-    RegisterSerializer,
     UserSerializer,
     VerifyEmailSerializer,
 )
@@ -54,6 +53,8 @@ from .serializers import (
     ReasonSerializer,
     ShopCategorySerializer,
     ShopFacetsSerializer,
+    ShopperRegisterSerializer,
+    ShopperSerializer,
     ShopProductDetailSerializer,
     ShopProductSerializer,
     StoreOrderSerializer,
@@ -217,13 +218,15 @@ class QuoteView(PublicMixin, APIView):
 class CustomerRegisterView(PublicAuthView):
     @extend_schema(
         operation_id="marketplace_auth_register",
-        request=RegisterSerializer,
+        request=ShopperRegisterSerializer,
         responses={202: None},
         description="Same as `auth/register` for shoppers (works even when merchant sign-ups "
-        "are closed). Then `marketplace/auth/verify-email`.",
+        "are closed), plus their identity: `phone`, `nni`, `birth_date` (the e-KYC proves "
+        "it before Meysara). Then `marketplace/auth/verify-email`. Errors (with `field`): "
+        "`invalid_nni`, `invalid_phone`.",
     )
     def post(self, request):
-        account_services.register(**self.validated(RegisterSerializer), merchant=False)
+        account_services.register(**self.validated(ShopperRegisterSerializer), merchant=False)
         return Response(status=status.HTTP_202_ACCEPTED)
 
 
@@ -292,8 +295,14 @@ class CustomerPasswordForgotView(PublicAuthView):
 
 
 @extend_schema(tags=["marketplace: auth"])
+@extend_schema_view(
+    patch=extend_schema(
+        description="Errors (with `field`): `invalid_nni`, `invalid_phone`; `identity_locked` "
+        "(409) when the NNI or the birth date change after the e-KYC."
+    )
+)
 class CustomerMeView(CustomerMixin, generics.RetrieveUpdateAPIView):
-    serializer_class = UserSerializer
+    serializer_class = ShopperSerializer
     http_method_names = ["get", "patch"]
 
     def get_object(self):
@@ -362,8 +371,10 @@ class IdentityCodeThrottle(SimpleRateThrottle):
 
 
 IDENTITY_DOC = (
-    "e-KYC required before Meysara (BCM Instruction n°13/GR/2025, chapter II). Steps: "
-    "`POST marketplace/identity` (details + consent, sends a code to the phone) → "
+    "e-KYC required before Meysara (BCM Instruction n°13/GR/2025, chapter II). It proves "
+    "that the shopper is the person of their profile (names, NNI, birth date and phone, "
+    "given at sign-up). Steps: `POST marketplace/identity` (consent, sends a code to the "
+    "profile's phone) → "
     "`POST marketplace/identity/phone/verify` → `POST marketplace/identity/documents` "
     "(ID card front and back + live selfie). `identity.status`: `phone_pending` · "
     "`documents_pending` · `verified` · `rejected` (start again). The provider is simulated "
@@ -391,10 +402,11 @@ class IdentityView(CustomerMixin, APIView):
         operation_id="marketplace_identity_start",
         request=IdentityStartSerializer,
         responses={200: IdentityStateSerializer},
-        description="Starts or restarts the check and sends a code to `phone` (10 min, 3 "
-        "attempts; 5 codes per hour). Errors (with `field`): `consent_required`, `invalid_nni`, "
-        "`invalid_phone`, `underage` (18+); `nni_already_used` (409), "
-        "`identity_already_verified` (409).",
+        description="Starts or restarts the check from the profile and sends a code to its "
+        "phone (10 min, 3 attempts; 5 codes per hour). Errors: `profile_incomplete` (with "
+        "`fields`: the missing ones among `full_name`, `phone`, `nni`, `birth_date`); with "
+        "`field`: `consent_required`, `invalid_nni`, `invalid_phone`, `underage` (18+); "
+        "`nni_already_used` (409), `identity_already_verified` (409).",
     )
     def post(self, request):
         serializer = IdentityStartSerializer(data=request.data)
