@@ -111,8 +111,12 @@ info:
       closed until the shopper's identity is verified (e-KYC below), while a plan runs or an
       instalment is more than 7 days late; total ≥ 3 000 MRU, financed ≤ 60 000 MRU (settings in
       `console/settings`, never above the BCM ceiling of 60 000 MRU over 12 months, Instruction
-      n°13/GR/2025 art. 25; a share above it is left out of `choices`). Order with
-      `payment_method: "meysara", meysara_percent`. The rest is paid on delivery; instalments
+      n°13/GR/2025 art. 25; a share above it is left out of `choices`). Before ordering, show
+      the contract: `POST marketplace/meysara/contract {lines, meysara_percent, language}`; the
+      shopper ticks a box, and the order goes with `payment_method: "meysara", meysara_percent,
+      meysara_contract {version, digest, language, accepted: true}` (`meysara_contract_outdated`:
+      show the new contract). The signed contract stays readable at
+      `marketplace/orders/{id}/meysara/contract`. The rest is paid on delivery; instalments
       fall due every 14 days from delivery. The order's `meysara` block has the schedule; the
       Mahali team records payments (`console/marketplace/orders/{id}/meysara/pay`).
     - **Identity (e-KYC, before Meysara):** `GET marketplace/identity`, then
@@ -4996,6 +5000,72 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
           description: Too many requests
+  /api/v1/marketplace/meysara/contract:
+    post:
+      operationId: marketplace_meysara_contract
+      description: 'The Meysara contract for this cart and share, in `language`: parties,
+        items, schedule (days after delivery), plain-language clauses. Show it, let
+        the shopper tick the box, then send `version` and `digest` back with the order
+        (`meysara_contract`). Errors: those of the order (`insufficient_stock`…) and
+        `meysara_not_allowed` (409, with `reason`).'
+      tags:
+      - 'marketplace: orders'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MeysaraContractRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MeysaraContractRequestRequest'
+        required: true
+      security:
+      - customerJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeysaraContractTerms'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
   /api/v1/marketplace/meysara/offer:
     get:
       operationId: marketplace_meysara_offer
@@ -5158,7 +5228,9 @@ paths:
         are fixed now. `payment_method=meysara` with `meysara_percent` (one of the
         offer''s `choices`) reserves a pay-in-4 plan. Errors: `empty_cart`, `insufficient_stock`
         (409, with `field`, `available`), `invalid_quantity`, `whole_quantity_required`,
-        `meysara_percent_required`, `meysara_not_allowed` (409, with `reason`).'
+        `meysara_percent_required`, `meysara_not_allowed` (409, with `reason`), `meysara_contract_required`
+        (no accepted contract), `meysara_contract_outdated` (409: prices, items or
+        text changed since it was read; fetch it again).'
       tags:
       - 'marketplace: orders'
       requestBody:
@@ -5302,6 +5374,69 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Order'
+          description: ''
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Validation error (`code` = validation_error, see `errors`)
+            or business rule
+        '401':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not authenticated / token invalid or expired
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'Forbidden: missing permission, store not active, read-only…'
+        '404':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not found
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict with current state (e.g. insufficient_stock)
+        '429':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Too many requests
+  /api/v1/marketplace/orders/{id}/meysara/contract:
+    get:
+      operationId: marketplace_orders_meysara_contract
+      description: 'The Meysara contract the shopper signed for this order, as shown
+        then. Errors: `no_meysara_contract` (404: paid on delivery, or booked before
+        contracts).'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Un(une) Chaîne UUID identifiant ce(cette) order.
+        required: true
+      tags:
+      - 'marketplace: orders'
+      security:
+      - customerJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeysaraSignedContract'
           description: ''
         '400':
           content:
@@ -13803,6 +13938,74 @@ components:
       - id
       - name
       - phone
+    ContractClause:
+      type: object
+      properties:
+        key:
+          type: string
+        title:
+          type: string
+        text:
+          type: string
+      required:
+      - key
+      - text
+      - title
+    ContractInstalment:
+      type: object
+      properties:
+        number:
+          type: integer
+        amount:
+          type: integer
+          description: MRU
+        days_after_delivery:
+          type: integer
+      required:
+      - amount
+      - days_after_delivery
+      - number
+    ContractLine:
+      type: object
+      properties:
+        description:
+          type: string
+        quantity:
+          type: string
+        line_total:
+          type: integer
+          description: MRU
+      required:
+      - description
+      - line_total
+      - quantity
+    ContractParty:
+      type: object
+      properties:
+        full_name:
+          type: string
+        nni:
+          type: string
+          description: 'Masked: •••• 4821'
+        phone:
+          type: string
+      required:
+      - full_name
+      - nni
+      - phone
+    ContractSeller:
+      type: object
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+        city:
+          type: string
+      required:
+      - city
+      - name
+      - role
     Credit:
       type: object
       properties:
@@ -14924,6 +15127,128 @@ components:
       - is_active
       - role
       - user
+    MeysaraContractAcceptanceRequest:
+      type: object
+      properties:
+        version:
+          type: string
+          minLength: 1
+          maxLength: 10
+        digest:
+          type: string
+          minLength: 1
+          maxLength: 64
+        language:
+          $ref: '#/components/schemas/LanguageEnum'
+        accepted:
+          type: boolean
+          description: The shopper ticked the box
+      required:
+      - accepted
+      - digest
+      - language
+      - version
+    MeysaraContractRequestRequest:
+      type: object
+      properties:
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartLineRequest'
+        meysara_percent:
+          $ref: '#/components/schemas/MeysaraPercentEnum'
+        language:
+          allOf:
+          - $ref: '#/components/schemas/LanguageEnum'
+          default: fr
+      required:
+      - lines
+      - meysara_percent
+    MeysaraContractSummary:
+      type: object
+      properties:
+        number:
+          type: string
+          description: MEY-2611-0006
+          maxLength: 20
+        version:
+          type: string
+          description: Version of the contract text
+          maxLength: 10
+        language:
+          type: string
+          description: fr · ar · en, as shown
+          maxLength: 2
+        accepted_at:
+          type: string
+          format: date-time
+      required:
+      - accepted_at
+      - language
+      - number
+      - version
+    MeysaraContractTerms:
+      type: object
+      properties:
+        version:
+          type: string
+        language:
+          $ref: '#/components/schemas/LanguageEnum'
+        title:
+          type: string
+        digest:
+          type: string
+          description: Send back with the order, with `version`
+        buyer:
+          $ref: '#/components/schemas/ContractParty'
+        seller:
+          $ref: '#/components/schemas/ContractSeller'
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContractLine'
+        total:
+          type: integer
+          description: MRU
+        percent:
+          type: integer
+        on_delivery:
+          type: integer
+          description: MRU
+        financed:
+          type: integer
+          description: MRU
+        instalments:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContractInstalment'
+        interest:
+          type: integer
+        fees:
+          type: integer
+        late_fees:
+          type: integer
+        clauses:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContractClause'
+      required:
+      - buyer
+      - clauses
+      - digest
+      - fees
+      - financed
+      - instalments
+      - interest
+      - language
+      - late_fees
+      - lines
+      - on_delivery
+      - percent
+      - seller
+      - title
+      - total
+      - version
     MeysaraInstalment:
       type: object
       properties:
@@ -15045,6 +15370,11 @@ components:
     MeysaraPlan:
       type: object
       properties:
+        contract:
+          allOf:
+          - $ref: '#/components/schemas/MeysaraContractSummary'
+          nullable: true
+          readOnly: true
         percent:
           type: integer
           maximum: 32767
@@ -15076,6 +15406,7 @@ components:
           items:
             $ref: '#/components/schemas/MeysaraInstalment'
       required:
+      - contract
       - financed
       - instalments
       - on_delivery
@@ -15093,6 +15424,32 @@ components:
         * `active` - En cours
         * `paid` - Soldé
         * `cancelled` - Annulé
+    MeysaraSignedContract:
+      type: object
+      properties:
+        number:
+          type: string
+          description: MEY-2611-0006
+          maxLength: 20
+        version:
+          type: string
+          description: Version of the contract text
+          maxLength: 10
+        language:
+          type: string
+          description: fr · ar · en, as shown
+          maxLength: 2
+        accepted_at:
+          type: string
+          format: date-time
+        terms:
+          $ref: '#/components/schemas/MeysaraContractTerms'
+      required:
+      - accepted_at
+      - language
+      - number
+      - terms
+      - version
     MoneyAccount:
       type: object
       properties:
@@ -15483,6 +15840,12 @@ components:
           oneOf:
           - $ref: '#/components/schemas/MeysaraPercentEnum'
           - $ref: '#/components/schemas/NullEnum'
+        meysara_contract:
+          allOf:
+          - $ref: '#/components/schemas/MeysaraContractAcceptanceRequest'
+          nullable: true
+          description: 'With payment_method=meysara: the contract shown (`marketplace/meysara/contract`),
+            accepted'
       required:
       - delivery_address
       - delivery_city

@@ -27,7 +27,7 @@ from apps.inventory.models import MovementKind, SerialStatus, SerialUnit, StoreP
 from apps.inventory.services import lock_products, move
 from apps.stores.models import Store
 
-from . import meysara, selectors
+from . import contract, meysara, selectors
 from .models import (
     Order,
     OrderLine,
@@ -134,6 +134,8 @@ def place_order(
     note: str = "",
     payment_method: str = PaymentMethod.CASH_ON_DELIVERY,
     meysara_percent: int | None = None,
+    meysara_contract: dict | None = None,
+    request=None,
 ) -> Order:
     if not lines:
         raise ApiError("empty_cart", "Add at least one product.", extra={"field": "lines"})
@@ -143,6 +145,12 @@ def place_order(
                 "meysara_percent_required",
                 "Choose the share paid with Meysara.",
                 extra={"field": "meysara_percent"},
+            )
+        if not (meysara_contract or {}).get("accepted"):
+            raise ApiError(
+                "meysara_contract_required",
+                "Read and accept the Meysara contract first.",
+                extra={"field": "meysara_contract"},
             )
         # One checkout at a time per shopper: the "one plan" rule must hold.
         type(customer).objects.select_for_update().get(pk=customer.pk)
@@ -168,8 +176,10 @@ def place_order(
             line_total=line.line_total,
         )
         by_store[line.offer.store_id].append((line, order_line))
+    signed = None
     if payment_method == PaymentMethod.MEYSARA:
-        meysara.reserve(order, meysara_percent)
+        plan = meysara.reserve(order, meysara_percent)
+        signed = contract.sign(order, plan, meysara_contract, request)
 
     for store_id, items in by_store.items():
         with store_context(store_id):
@@ -197,6 +207,13 @@ def place_order(
             {"store": store, "order": order, "total": store_order.total, "lines": len(items)},
         )
     notify(customer, "marketplace_order_placed", {"order": order, "user": customer})
+    if signed:
+        notify(
+            customer,
+            "marketplace_meysara_contract",
+            {"order": order, "user": customer, "contract": signed, "terms": signed.terms},
+            language=signed.language,
+        )
     return order
 
 

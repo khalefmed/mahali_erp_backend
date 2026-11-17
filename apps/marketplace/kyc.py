@@ -77,6 +77,13 @@ def is_verified(customer) -> bool:
     ).exists()
 
 
+def verified_identity(customer) -> IdentityVerification | None:
+    """The identity the shopper proved, as named in a Meysara contract."""
+    return IdentityVerification.objects.filter(
+        customer=customer, status=IdentityStatus.VERIFIED
+    ).first()
+
+
 def _send_code(verification: IdentityVerification) -> str:
     code = f"{secrets.randbelow(10**6):06d}"
     verification.otp_hash = make_password(code)

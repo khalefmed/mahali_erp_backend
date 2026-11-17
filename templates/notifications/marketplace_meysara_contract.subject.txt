@@ -1,0 +1,1 @@
+{% autoescape off %}{% if terms.language == "ar" %}عقد ميسرة {{ contract.number }} — الطلب {{ order.number }}{% elif terms.language == "en" %}Your Meysara contract {{ contract.number }} — order {{ order.number }}{% else %}Votre contrat Meysara {{ contract.number }} — commande {{ order.number }}{% endif %}{% endautoescape %}

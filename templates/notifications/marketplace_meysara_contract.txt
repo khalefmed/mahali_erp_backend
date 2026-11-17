@@ -1,0 +1,49 @@
+{% autoescape off %}{% if terms.language == "ar" %}مرحبًا {{ terms.buyer.full_name }}،
+
+هذه نسخة من العقد الذي وقّعتموه في {{ contract.accepted_at|date:"d/m/Y H:i" }} (الطلب {{ order.number }}).
+
+{{ terms.title }} — رقم {{ contract.number }} — النسخة {{ contract.version }}
+البائع: {{ terms.seller.name }}
+المشتري: {{ terms.buyer.full_name }} — الرقم الوطني {{ terms.buyer.nni }}
+
+المجموع: {{ terms.total }} أوقية — عند التسليم: {{ terms.on_delivery }} أوقية
+{% for i in terms.instalments %}القسط {{ i.number }}: {{ i.amount }} أوقية، بعد {{ i.days_after_delivery }} يومًا من التسليم
+{% endfor %}الفوائد: 0 — الرسوم: 0 — غرامات التأخير: 0
+{% for c in terms.clauses %}
+{{ c.title }}
+{{ c.text }}
+{% endfor %}
+فريق محلي
+{% elif terms.language == "en" %}Hello {{ terms.buyer.full_name }},
+
+Here is a copy of the contract you signed on {{ contract.accepted_at|date:"d/m/Y H:i" }} (order {{ order.number }}).
+
+{{ terms.title }} — no. {{ contract.number }} — version {{ contract.version }}
+Seller: {{ terms.seller.name }}
+Buyer: {{ terms.buyer.full_name }} — NNI {{ terms.buyer.nni }}
+
+Total: {{ terms.total }} MRU — on delivery: {{ terms.on_delivery }} MRU
+{% for i in terms.instalments %}Instalment {{ i.number }}: {{ i.amount }} MRU, {{ i.days_after_delivery }} days after delivery
+{% endfor %}Interest: 0 — fees: 0 — late fees: 0
+{% for c in terms.clauses %}
+{{ c.title }}
+{{ c.text }}
+{% endfor %}
+The Mahali team
+{% else %}Bonjour {{ terms.buyer.full_name }},
+
+Voici une copie du contrat que vous avez signé le {{ contract.accepted_at|date:"d/m/Y à H:i" }} (commande {{ order.number }}).
+
+{{ terms.title }} — n° {{ contract.number }} — version {{ contract.version }}
+Vendeur : {{ terms.seller.name }}
+Acheteuse ou acheteur : {{ terms.buyer.full_name }} — NNI {{ terms.buyer.nni }}
+
+Total : {{ terms.total }} MRU — à la livraison : {{ terms.on_delivery }} MRU
+{% for i in terms.instalments %}Échéance {{ i.number }} : {{ i.amount }} MRU, {{ i.days_after_delivery }} jours après la livraison
+{% endfor %}Intérêts : 0 — frais : 0 — frais de retard : 0
+{% for c in terms.clauses %}
+{{ c.title }}
+{{ c.text }}
+{% endfor %}
+L'équipe Mahali
+{% endif %}{% endautoescape %}
