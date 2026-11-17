@@ -3,6 +3,13 @@
 Every change the web app should know about (new or changed endpoints, fields, error
 codes). Newest first. The full contract is always at `/api/schema/` on each environment.
 
+## 2026-11-17 — e-KYC: back of the ID card (#43)
+
+- `POST marketplace/identity/documents` takes an optional `id_back` (photo of the back of the
+  card, with the MRZ), checked like the other photos (`unsupported_file_type`,
+  `file_too_large` with `field: "id_back"`) and never kept. The web app now sends it with
+  the live capture.
+
 ## 2026-11-17 — Meysara: electronic contract before paying in 4 (#40)
 
 - New `POST marketplace/meysara/contract {lines, meysara_percent, language}` (customer

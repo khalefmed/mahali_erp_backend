@@ -466,6 +466,9 @@ class IdentityCodeSerializer(serializers.Serializer):
 
 class IdentityDocumentsSerializer(serializers.Serializer):
     id_front = serializers.FileField(help_text="Photo of the front of the ID card")
+    id_back = serializers.FileField(
+        required=False, help_text="Photo of the back of the ID card (MRZ). Optional for now"
+    )
     selfie = serializers.FileField(help_text="Selfie taken in the app (liveness check)")
 
 
