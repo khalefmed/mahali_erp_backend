@@ -3,8 +3,9 @@
 1. `start`: identity details (NNI, names, birth date, phone) and explicit consent. A
    one-time code goes to the phone (art. 4: phone ownership by OTP).
 2. `verify_phone`: the code (10 min, 3 attempts).
-3. `check_documents`: a photo of the ID card and a selfie. The provider checks the document,
-   matches the face and runs a liveness check; the images are then dropped, never stored
+3. `check_documents`: photos of the ID card (front, and back when the app sends it) and a
+   selfie taken live. The provider checks the document (the back carries the MRZ), matches
+   the face and runs a liveness check; the images are then dropped, never stored
    (law n°2017-020: keep only what is needed).
 
 There is no identity provider yet: `SimulatedProvider` stands in for it. It sends no SMS
@@ -54,7 +55,7 @@ class SimulatedProvider:
     def send_code(self, phone: str, code: str) -> None:
         logger.info("kyc: simulated SMS to %s, code %s", phone, code)
 
-    def check_documents(self, verification: IdentityVerification, id_front, selfie):
+    def check_documents(self, verification: IdentityVerification, id_front, selfie, id_back=None):
         reference = f"SIM-{uuid.uuid4().hex[:12].upper()}"
         if verification.nni.startswith("000"):
             checks = {"document": "failed", "face_match": None, "liveness": "not_run"}
@@ -220,7 +221,7 @@ def _image(upload, field: str):
 
 
 @transaction.atomic
-def check_documents(customer, *, id_front, selfie) -> IdentityVerification:
+def check_documents(customer, *, id_front, selfie, id_back=None) -> IdentityVerification:
     """The provider decides; a rejection can be retried from `start`."""
     verification = _current(customer, for_update=True)
     if verification.status != IdentityStatus.DOCUMENTS_PENDING:
@@ -230,7 +231,10 @@ def check_documents(customer, *, id_front, selfie) -> IdentityVerification:
             extra={"status": verification.status},
         )
     result = provider.check_documents(
-        verification, _image(id_front, "id_front"), _image(selfie, "selfie")
+        verification,
+        _image(id_front, "id_front"),
+        _image(selfie, "selfie"),
+        id_back=_image(id_back, "id_back") if id_back else None,
     )
     verification.provider_reference = result.reference
     verification.checks = result.checks

@@ -175,6 +175,25 @@ def test_documents_must_be_photos(shopper):
     assert (response.data["code"], response.data["field"]) == ("unsupported_file_type", "id_front")
 
 
+def test_the_back_of_the_card_is_checked_too(shopper):
+    _, client = shopper
+    code = start(client).data["simulation_code"]
+    client.post(f"{IDENTITY}/phone/verify", {"code": code}, format="json")
+    pdf = SimpleUploadedFile("back.pdf", b"%PDF-1.4 test", content_type="application/pdf")
+    wrong = client.post(
+        f"{IDENTITY}/documents",
+        {"id_front": photo(), "id_back": pdf, "selfie": photo()},
+        format="multipart",
+    )
+    assert (wrong.data["code"], wrong.data["field"]) == ("unsupported_file_type", "id_back")
+    response = client.post(
+        f"{IDENTITY}/documents",
+        {"id_front": photo(), "id_back": photo("back.jpg"), "selfie": photo()},
+        format="multipart",
+    )
+    assert response.data["identity"]["status"] == "verified"
+
+
 def test_one_nni_one_account(shopper):
     verify_identity(make_user("first@example.com"), nni="2012345678")
     _, client = shopper

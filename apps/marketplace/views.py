@@ -364,11 +364,11 @@ class IdentityCodeThrottle(SimpleRateThrottle):
 IDENTITY_DOC = (
     "e-KYC required before Meysara (BCM Instruction n°13/GR/2025, chapter II). Steps: "
     "`POST marketplace/identity` (details + consent, sends a code to the phone) → "
-    "`POST marketplace/identity/phone/verify` → `POST marketplace/identity/documents` (ID card "
-    "+ selfie). `identity.status`: `phone_pending` · `documents_pending` · `verified` · "
-    "`rejected` (start again). The provider is simulated for now: `simulation_code` carries the "
-    "SMS code, and NNIs starting with `000` are rejected (`reject_reason` "
-    "`document_unreadable`)."
+    "`POST marketplace/identity/phone/verify` → `POST marketplace/identity/documents` "
+    "(ID card front and back + live selfie). `identity.status`: `phone_pending` · "
+    "`documents_pending` · `verified` · `rejected` (start again). The provider is simulated "
+    "for now: `simulation_code` carries the SMS code, and NNIs starting with `000` are "
+    "rejected (`reject_reason` `document_unreadable`)."
 )
 
 
@@ -446,10 +446,10 @@ class IdentityDocumentsView(CustomerMixin, APIView):
         operation_id="marketplace_identity_documents",
         request={"multipart/form-data": IdentityDocumentsSerializer},
         responses={200: IdentityStateSerializer},
-        description="The provider checks the ID card, matches the face and runs a liveness "
-        "check; the photos are not kept. Ends in `verified` or `rejected`. Errors (with "
-        "`field`): `unsupported_file_type`, `file_too_large`; `identity_not_started`, "
-        "`identity_wrong_step` (409), `nni_already_used` (409).",
+        description="The provider checks the ID card (front, and back when sent), matches the "
+        "face and runs a liveness check; the photos are not kept. Ends in `verified` or "
+        "`rejected`. Errors (with `field`): `unsupported_file_type`, `file_too_large`; "
+        "`identity_not_started`, `identity_wrong_step` (409), `nni_already_used` (409).",
     )
     def post(self, request):
         serializer = IdentityDocumentsSerializer(data=request.data)
